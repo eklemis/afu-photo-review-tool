@@ -26,6 +26,11 @@
 		is_path_exist = await invoke('is_path_exist', { path });
 		let fileList = await invoke('get_file_list', { folderPath: path });
 		console.log('fileList:', fileList);
+		getPhoto(fileList[0]);
+	};
+	let img_source = '';
+	const getPhoto = async (/** @type {any} */ path) => {
+		img_source = await invoke('get_photo', { path });
 	};
 </script>
 
@@ -58,3 +63,4 @@
 	<button class=" bg-red-500 rounded-md p-2 text-white" on:click={check_path}>Start Review</button>
 </div>
 <p>Is selected path exist? {is_path_exist}</p>
+<img src={img_source} alt="" />

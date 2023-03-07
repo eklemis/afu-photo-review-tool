@@ -12,3 +12,5 @@ src-tauri/target
 .svelte-kit
 *.lock
 *.log
+.gitignore
+.npmrc
