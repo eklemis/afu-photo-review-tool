@@ -21,6 +21,8 @@ tauri = { version = "1.2.4", features = [] }
 walkdir = "2.3.2"
 image = "0.24.5"
 base64 = "0.21.0"
+fast_image_resize = "2.6.0"
+win_ocr = "0.1.2"
 
 [features]
 # by default Tauri runs in production mode
@@ -29,3 +31,6 @@ default = [ "custom-protocol" ]
 # this feature is used for production builds where `devPath` points to the filesystem
 # DO NOT remove this
 custom-protocol = [ "tauri/custom-protocol" ]
+
+[profile.release]
+opt-level = 3

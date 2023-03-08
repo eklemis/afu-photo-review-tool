@@ -1,5 +1,7 @@
 <script>
-	import '../app.css';
+	// @ts-nocheck
+	import { photo_paths } from '../lib/store';
+
 	import { invoke } from '@tauri-apps/api/tauri';
 	const photographers = [
 		'Arini',
@@ -21,20 +23,20 @@
 	];
 	let path = '';
 	let is_path_exist = false;
+
+	/**
+	 * @type {string[]}
+	 */
+	let fileList = [];
 	const check_path = async () => {
 		console.log('path:', path);
 		is_path_exist = await invoke('is_path_exist', { path });
-		let fileList = await invoke('get_file_list', { folderPath: path });
-		console.log('fileList:', fileList);
-		getPhoto(fileList[0]);
-	};
-	let img_source = '';
-	const getPhoto = async (/** @type {any} */ path) => {
-		img_source = await invoke('get_photo', { path });
+		fileList = await invoke('get_file_list', { folderPath: path });
+		photo_paths.set(fileList);
 	};
 </script>
 
-<div class="p-5 flex flex-col gap-y-4">
+<div class="p-5 flex flex-col gap-y-4 h-screen w-full">
 	<div>
 		<label for="photo folder" class="block text-sm font-medium leading-6 text-gray-900"
 			>Folder path</label
@@ -44,6 +46,7 @@
 			id="photo folder"
 			class="block w-full rounded-md border-0 py-1.5 pl-7 pr-20 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:outline-none focus:ring-indigo-600 sm:text-sm sm:leading-6"
 			bind:value={path}
+			on:change={() => check_path()}
 		/>
 	</div>
 	<div>
@@ -60,7 +63,11 @@
 			{/each}
 		</select>
 	</div>
-	<button class=" bg-red-500 rounded-md p-2 text-white" on:click={check_path}>Start Review</button>
+
+	<a
+		href="/review"
+		class={`bg-red-500 rounded-md p-2 text-white text-center ${
+			is_path_exist ? '' : 'pointer-events-none'
+		}`}>Start Review</a
+	>
 </div>
-<p>Is selected path exist? {is_path_exist}</p>
-<img src={img_source} alt="" />
