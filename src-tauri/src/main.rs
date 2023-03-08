@@ -46,10 +46,10 @@ fn res_image(img: DynamicImage, higher:bool)->DynamicImage{
     let mut nwidth: u32;
     let mut nheight: u32;
     if higher{
-        (nwidth, nheight) = resized_width_height(img.width(), img.height(),(300, 400));        
+        (nwidth, nheight) = resized_width_height(img.width(), img.height(),(600, 800));        
     }
     else{
-        (nwidth, nheight) = resized_width_height(img.width(), img.height(), (600, 800));
+        (nwidth, nheight) = resized_width_height(img.width(), img.height(), (450, 600));
     }
     let res_image = img.resize(nwidth, nheight, FilterType::Lanczos3);
     res_image
@@ -83,9 +83,10 @@ fn get_rotated_image(src_path:&str, deg:u32)->String{
         .unwrap()
         .decode()
         .unwrap();
-    let res_img = resized_image(img);
+    let res_img = resized_image_higher(img);
     let rot_image = rotate_image(res_img, deg);
-    image_to_base64(rot_image)
+    let base64 = image_to_base64(rot_image);
+    format!("data:image/png;base64,{}", base64)
 }
 #[tauri::command]
 fn get_ocr_info(src_path: &str, deg:u32)->String{

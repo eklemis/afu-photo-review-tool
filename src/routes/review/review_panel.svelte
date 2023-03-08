@@ -122,7 +122,7 @@
 		<div class="absolute bottom-0 flex gap-x-2 border">
 			<button
 				class="border rounded-md px-4 py-2 bg-white text-gray-800"
-				on:click={set_identity_image}>Mark as identity</button
+				on:click={set_identity_image}>Set identity</button
 			>
 			<button class="border rounded-md px-4 py-2 bg-white text-gray-800" on:click={go_prev}
 				>Prev</button
