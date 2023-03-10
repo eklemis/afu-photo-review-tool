@@ -7,7 +7,7 @@
 		<ul class="flex gap-x-4">
 			<li><a href="/">Home</a></li>
 			<li><a href="/" class="bg-red-500 rounded-md p-2 text-white text-center mb-3">Back</a></li>
-			<li>|</li>
+			<li class=" text-gray-300">|</li>
 			<li><a href="/settings">Settings</a></li>
 		</ul>
 	</nav>

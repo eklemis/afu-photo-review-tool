@@ -1,7 +1,6 @@
 <script>
 	// @ts-nocheck
-	import { photo_paths } from '../lib/store';
-
+	import { photo_paths, selectedSchool } from '../lib/store';
 	import { invoke } from '@tauri-apps/api/tauri';
 	const photographers = [
 		'Arini',
@@ -23,13 +22,13 @@
 	];
 	let path = '';
 	let is_path_exist = false;
+	let school = '';
 
 	/**
 	 * @type {string[]}
 	 */
 	let fileList = [];
 	const check_path = async () => {
-		console.log('path:', path);
 		is_path_exist = await invoke('is_path_exist', { path });
 		fileList = await invoke('get_file_list', { folderPath: path });
 		photo_paths.set(fileList);
@@ -39,14 +38,25 @@
 <div class="p-5 flex flex-col gap-y-4 h-screen w-full">
 	<div>
 		<label for="photo folder" class="block text-sm font-medium leading-6 text-gray-900"
-			>Folder path</label
+			>Source folder</label
 		>
 		<input
 			type="text"
 			id="photo folder"
-			class="block w-full rounded-md border-0 py-1.5 pl-7 pr-20 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:outline-none focus:ring-indigo-600 sm:text-sm sm:leading-6"
+			class="block w-full rounded-md border-0 py-1.5 px-4 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:outline-none focus:ring-indigo-600 sm:text-sm sm:leading-6"
 			bind:value={path}
 			on:change={() => check_path()}
+		/>
+	</div>
+	<div>
+		<label for="school" class="block text-sm font-medium leading-6 text-gray-900"
+			>Enter school name</label
+		>
+		<input
+			type="text"
+			bind:value={school}
+			id="school"
+			class="block w-full rounded-md border-0 py-1.5 px-4 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:outline-none focus:ring-indigo-600 sm:text-sm sm:leading-6"
 		/>
 	</div>
 	<div>
@@ -63,9 +73,9 @@
 			{/each}
 		</select>
 	</div>
-
 	<a
 		href="/review"
+		on:click={() => selectedSchool.set(school)}
 		class={`bg-red-500 rounded-md p-2 text-white text-center ${
 			is_path_exist ? '' : 'pointer-events-none'
 		}`}>Start Review</a

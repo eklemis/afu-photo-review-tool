@@ -16,6 +16,7 @@ use image::imageops::FilterType;
 use std::io::Cursor;
 use base64::{Engine as _, engine::general_purpose};
 use win_ocr::ocr;
+use std::fs;
 
 fn image_to_base64(img:DynamicImage)->String{
     let mut image_data: Vec<u8> = Vec::new();
@@ -24,7 +25,6 @@ fn image_to_base64(img:DynamicImage)->String{
     let base64 = general_purpose::STANDARD.encode(image_data);
     base64
 }
-fn rotate_and_copy(deg:u32, src_path:&str, dest_path:&str){}
 
 fn resized_width_height(old_width: u32, old_height: u32, ratio:(u32, u32))->(u32, u32){
     let mut nwidth: u32 = 0;
@@ -46,7 +46,7 @@ fn res_image(img: DynamicImage, higher:bool)->DynamicImage{
     let mut nwidth: u32;
     let mut nheight: u32;
     if higher{
-        (nwidth, nheight) = resized_width_height(img.width(), img.height(),(600, 800));        
+        (nwidth, nheight) = resized_width_height(img.width(), img.height(),(750, 1000));        
     }
     else{
         (nwidth, nheight) = resized_width_height(img.width(), img.height(), (450, 600));
@@ -144,6 +144,7 @@ fn get_file_list(folder_path: &str) -> Vec<String>{
     
     v
 }
+
 #[tauri::command]
 fn get_photo(path:&str)->String{
     println!("Receive path:{}",path);
@@ -169,9 +170,30 @@ fn get_photo(path:&str)->String{
     format!("data:image/png;base64,{}", base64)
 }
 
+#[tauri::command]
+fn rotate_and_copy(deg:u32, src_path:&str, dest_path:&str)->bool{
+    println!("RAC received:");
+    println!("src: {}", src_path);
+    println!("dest: {}", dest_path);
+    println!("deg: {}", deg);
+    let img = ImageReader::open(src_path)
+        .unwrap()
+        .decode()
+        .unwrap();
+    let res_img = resized_image_higher(img);
+    let rot_image = rotate_image(res_img, deg);
+    let result = rot_image.save(dest_path);
+    if let Ok(_) = result{
+        return true
+    }
+    else{
+        println!("{:?}", result)
+    }
+    false
+}
 fn main() {
   tauri::Builder::default()
-    .invoke_handler(tauri::generate_handler![is_path_exist, get_file_list, get_photo, get_ocr_info, get_rotated_image])
+    .invoke_handler(tauri::generate_handler![is_path_exist, get_file_list, get_photo, get_ocr_info, get_rotated_image, rotate_and_copy])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
 }
