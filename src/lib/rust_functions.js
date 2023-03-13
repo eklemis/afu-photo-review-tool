@@ -14,3 +14,7 @@ export const rotate_and_copy = async (deg, src_path, dest_path) => {
 	//console.log('rotate and copy photo executed!');
 	return await invoke('rotate_and_copy', { deg: deg, srcPath: src_path, destPath: dest_path });
 };
+
+export const get_all_child_ids = async (path) => {
+	return await invoke('get_jpg_chil_ids', { folderPath: path });
+};

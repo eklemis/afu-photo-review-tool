@@ -15,8 +15,6 @@ use image::io::Reader as ImageReader;
 use image::imageops::FilterType;
 use std::io::Cursor;
 use base64::{Engine as _, engine::general_purpose};
-use win_ocr::ocr;
-use std::fs;
 
 fn image_to_base64(img:DynamicImage)->String{
     let mut image_data: Vec<u8> = Vec::new();
@@ -27,8 +25,8 @@ fn image_to_base64(img:DynamicImage)->String{
 }
 
 fn resized_width_height(old_width: u32, old_height: u32, ratio:(u32, u32))->(u32, u32){
-    let mut nwidth: u32 = 0;
-    let mut nhight: u32 = 0;
+    let nwidth: u32;
+    let nhight: u32;
     let ratio_three = ratio.0;
     let ratio_four= ratio.1;
     if old_width > old_height{
@@ -43,10 +41,10 @@ fn resized_width_height(old_width: u32, old_height: u32, ratio:(u32, u32))->(u32
 }
 
 fn res_image(img: DynamicImage, higher:bool)->DynamicImage{
-    let mut nwidth: u32;
-    let mut nheight: u32;
+    let nwidth: u32;
+    let nheight: u32;
     if higher{
-        (nwidth, nheight) = resized_width_height(img.width(), img.height(),(750, 1000));        
+        (nwidth, nheight) = resized_width_height(img.width(), img.height(),(840, 1120));        
     }
     else{
         (nwidth, nheight) = resized_width_height(img.width(), img.height(), (450, 600));
@@ -62,7 +60,7 @@ fn resized_image_higher(img: DynamicImage)->DynamicImage{
     res_image(img, true)
 }
 fn rotate_image(img: DynamicImage, deg:u32)->DynamicImage{
-    let mut rot_img: DynamicImage;
+    let rot_img: DynamicImage;
     if deg == 90{
         rot_img = img.rotate90();
     }
@@ -78,6 +76,17 @@ fn rotate_image(img: DynamicImage, deg:u32)->DynamicImage{
     rot_img
 }
 #[tauri::command]
+fn get_rotated_image_tumb(src_path:&str, deg:u32)->String{
+    let img = ImageReader::open(src_path)
+        .unwrap()
+        .decode()
+        .unwrap();
+    let res_img = resized_image(img);
+    let rot_image = rotate_image(res_img, deg);
+    let base64 = image_to_base64(rot_image);
+    format!("data:image/png;base64,{}", base64)
+}
+#[tauri::command]
 fn get_rotated_image(src_path:&str, deg:u32)->String{
     let img = ImageReader::open(src_path)
         .unwrap()
@@ -89,38 +98,50 @@ fn get_rotated_image(src_path:&str, deg:u32)->String{
     format!("data:image/png;base64,{}", base64)
 }
 #[tauri::command]
-fn get_ocr_info(src_path: &str, deg:u32)->String{
-    let img = ImageReader::open(src_path)
-        .unwrap()
-        .decode()
-        .unwrap();
-    let res_img = resized_image(img);
-    let mut rot_img: DynamicImage;
-    if deg==90{
-        rot_img = res_img.rotate90()
-    }
-    else if deg == 180 {
-        rot_img = res_img.rotate180()
-    }
-    else if deg == 270 {
-        rot_img = res_img.rotate270()
-    }
-    else{
-        rot_img = res_img
-    }
-    if let Ok(msg) = rot_img.save("_temp_rotated.jpg"){
-        let ocr_text: String = ocr("_temp_rotated.jpg").unwrap();
-        return ocr_text;
-    }
-
-    String::from("Ocr failed")
+fn get_ocr_info(_src_path: &str, _deg:u32)->String{
+    String::from("Ocr info")
 }
-
 
 #[tauri::command]
 fn is_path_exist(path:&str) -> bool{
     Path::new(path).exists()
 }
+
+#[tauri::command]
+fn jpg_count(folder_path: &str)->i32{
+    let mut count = 0;
+    for entry in WalkDir::new(folder_path).into_iter().filter_map(|e| e.ok()) {
+        let file_path = entry.path();
+
+        if file_path.is_file() && file_path.extension().unwrap_or_default() == "JPG" {
+            count += 1;
+        }
+    }
+    count
+}
+#[tauri::command]
+fn get_jpg_chil_ids(folder_path: &str) -> Vec<String> {
+    let mut child_ids = Vec::new();
+
+    for entry in WalkDir::new(folder_path).into_iter().filter_map(|e| e.ok()) {
+        let file_path = entry.path();
+
+        if file_path.is_file() && file_path.extension().unwrap_or_default() == "JPG" {
+            if let Some(file_stem) = file_path.file_stem() {
+                if let Some(name) = file_stem.to_str() {
+                    if let Some(pos) = name.find('_') {
+                        child_ids.push(name[..pos].to_owned());
+                    } else {
+                        child_ids.push(name.to_owned());
+                    }
+                }
+            }
+        }
+    }
+
+    child_ids
+}
+
 #[tauri::command]
 fn get_file_list(folder_path: &str) -> Vec<String>{
     println!("Rust receive req: {}", folder_path);
@@ -193,7 +214,7 @@ fn rotate_and_copy(deg:u32, src_path:&str, dest_path:&str)->bool{
 }
 fn main() {
   tauri::Builder::default()
-    .invoke_handler(tauri::generate_handler![is_path_exist, get_file_list, get_photo, get_ocr_info, get_rotated_image, rotate_and_copy])
+    .invoke_handler(tauri::generate_handler![is_path_exist, get_file_list, get_photo, get_ocr_info, get_rotated_image, get_rotated_image_tumb, rotate_and_copy, get_jpg_chil_ids, jpg_count])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
 }

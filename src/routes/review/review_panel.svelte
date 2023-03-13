@@ -3,12 +3,16 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { invoke } from '@tauri-apps/api/tauri';
 	import { photo_paths, mainDestPath, selectedSchool } from '../../lib/store';
-	import { get_higher_rotated_image, rotate_and_copy } from '$lib/rust_functions';
+	import {
+		get_higher_rotated_image,
+		rotate_and_copy,
+		get_all_child_ids
+	} from '$lib/rust_functions';
 	import successIcon from '$lib/images/success.svg';
 	import failedIcon from '$lib/images/error.svg';
 
 	import '@fancyapps/ui/dist/fancybox/fancybox.css';
-	import { rotate90, rotate180, rotate270 } from '$lib/rotate_front_end.js';
+	import { rotate90, rotate180 } from '$lib/rotate_front_end.js';
 	import BiggerPicture from 'bigger-picture/svelte';
 	import 'bigger-picture/css';
 
@@ -21,6 +25,21 @@
 	const unsub_photo_path = photo_paths.subscribe((value) => (image_list = value));
 
 	let curr_rot_deg = 0;
+	let contain_identity = false;
+	let ids_with_photos = [];
+
+	let identity_image = {
+		path: '',
+		src: ''
+	};
+	let preserve_identity_image = {
+		path: '',
+		src: ''
+	};
+	const set_new_identity = (new_idt) => {
+		preserve_identity_image = Object.assign({}, identity_image);
+		identity_image = { ...new_idt };
+	};
 
 	onDestroy(() => {
 		unsub_mainDestPath();
@@ -33,50 +52,99 @@
 	});
 	onMount(async () => {
 		const imageLinks = document.querySelectorAll('#images > a');
+		const idtLinks = document.querySelectorAll('#idt-image');
+
 		// add click listener to open BiggerPicture
 		for (let link of imageLinks) {
 			link.addEventListener('click', openGallery);
+		}
+		// add click listener to open BiggerPicture
+		for (let link of idtLinks) {
+			link.addEventListener('click', openGalleryDt);
 		}
 		// grab image links
 		function openGallery(e) {
 			e.preventDefault();
 			//console.log('bp:', bp);
-			get_higher_rotated_image(image_list[curr_index], curr_rot_deg).then((img_src) => {
-				high_res_rotated_im_src = img_src;
+			if (image_list[curr_index] !== high_res_rotated_im.path) {
+				console.log('Get higher res image');
+				get_higher_rotated_image(image_list[curr_index], curr_rot_deg).then((img_src) => {
+					high_res_rotated_im.src = img_src;
+					high_res_rotated_im.path = image_list[curr_index];
+					setTimeout(() => {
+						bp.open({
+							items: imageLinks,
+							el: e.currentTarget
+						});
+					}, 0);
+				});
+			} else {
 				setTimeout(() => {
 					bp.open({
 						items: imageLinks,
 						el: e.currentTarget
 					});
 				}, 0);
-			});
+			}
+		} // grab image links
+		function openGalleryDt(e) {
+			e.preventDefault();
+			if (identity_image.path !== preserve_identity_image.path) {
+				console.log('Getting higher res identity image');
+				get_higher_rotated_image(identity_image.path, curr_rot_deg).then((img_src) => {
+					identity_image.src = img_src;
+					preserve_identity_image = Object.assign({}, identity_image);
+					console.log('got new identity image:', preserve_identity_image);
+					setTimeout(() => {
+						bp.open({
+							items: idtLinks,
+							el: e.currentTarget
+						});
+					}, 0);
+				});
+			} else {
+				setTimeout(() => {
+					bp.open({
+						items: idtLinks,
+						el: e.currentTarget
+					});
+				}, 0);
+			}
 		}
 		// Prepare first photo to display after selecting a folder
 		if (image_list.length > 0) {
-			console.log('First execution!');
 			getPhoto(image_list[curr_index]);
 		}
+		get_all_child_ids(main_dest_path + selected_school).then((ids) => (ids_with_photos = ids));
 	});
 
 	//UNIMPLEMENTED caching mechanism
 	const MAX_LAST_IMAGES = 10;
 	let last_images = [];
 
-	let high_res_rotated_im_src = '';
+	let high_res_rotated_im = { src: '', path: '' };
 	let img_source = '';
 	let img_path = '';
 	const getPhoto = async (path) => {
-		img_source = await invoke('get_photo', { path: path });
+		img_source = await invoke('get_rotated_image_tumb', { srcPath: path, deg: curr_rot_deg });
 	};
 
 	let curr_index = 0;
 	$: img_path = image_list[curr_index];
 
+	let id_input;
 	let curr_identity = {
 		child_id: '113',
 		roll_shot: ''
 	};
-
+	const identity_tick = () => {
+		if (contain_identity) {
+			curr_identity.child_id = '113';
+			//reset identity photo
+			set_new_identity({ path: image_list[curr_index], src: img_source });
+			id_input.focus();
+		}
+	};
 	$: if (image_list[curr_index]) {
 		let _path = image_list[curr_index];
 		let _path_splitted = _path.split('\\');
@@ -85,11 +153,16 @@
 			.replace('.JPG', '');
 	}
 
+	let is_child_id = false;
+	$: is_child_id =
+		/^1130\d{4}$/.test(curr_identity.child_id) || /^1131\d{4}$/.test(curr_identity.child_id);
+
 	const getCurrentPhoto = async () => {
+		contain_identity = false;
 		getPhoto(image_list[curr_index]);
 	};
 	const go_next = async () => {
-		if (curr_index < image_list.length) {
+		if (curr_index + 1 < image_list.length) {
 			curr_index++;
 		}
 		getCurrentPhoto();
@@ -102,7 +175,10 @@
 	};
 
 	const set_curr_rot_deg = (new_deg) => {
-		curr_rot_deg = new_deg;
+		if (new_deg !== curr_rot_deg) {
+			curr_rot_deg = new_deg;
+			getCurrentPhoto();
+		}
 	};
 	let file_rotated_and_saved_show = false;
 	let file_rotated_and_saved_success = false;
@@ -112,6 +188,7 @@
 		let dest_base_name = curr_identity.child_id + '_' + curr_identity.roll_shot + '.JPG';
 		let dest_path = main_dest_path + selected_school + '\\' + dest_base_name;
 		console.log('dest_path:', dest_path);
+		get_all_child_ids(main_dest_path + selected_school).then((ids) => (ids_with_photos = ids));
 		//console.log('source basename:', base_name);
 		//console.log('dest basename:', dest_base_name);
 		setTimeout(() => {
@@ -119,89 +196,187 @@
 			file_rotated_and_saved_success = rotate_and_copy(curr_rot_deg, img_path, dest_path);
 			setTimeout(() => {
 				file_rotated_and_saved_show = false;
+				get_all_child_ids(main_dest_path + selected_school).then((ids) => (ids_with_photos = ids));
 			}, 3000);
 		}, 0);
 	};
 </script>
 
-<div
-	class="flex gap-y-3 h-[100%] min-h-full content-center justify-center border-dashed border-red-500"
->
-	<div class="relative w-[50%] h-[100%] border flex flex-col ">
-		<div id="images">
+<div class="flex flex-col h-[100%] min-h-full content-center justify-center border-dashed">
+	<div class="relative w-full h-full flex">
+		<div class="flex flex-col p-4 gap-y-4 w-[550px] border">
+			<h3 class="text-sm font-bold text-[#423C3C]">Identity</h3>
+			<div class="flex gap-x-2 items-baseline justify-between">
+				<p class="flex w-28 text-sm text-gray-400 text-left">Child id</p>
+				<span class="focus:outline-none w-16 bg-white border-b text-[#423C3C] text-sm"
+					>{curr_identity.child_id}</span
+				>
+			</div>
+			<div class="flex gap-x-2 items-baseline justify-between">
+				<label for="roll_shot" class="flex w-28 text-sm text-gray-400 text-left">#Roll number</label
+				>
+				<input
+					type="text"
+					id="roll_shot"
+					class="focus:outline-none w-16 bg-white border-b text-[#423C3C] text-sm text-right"
+					bind:value={curr_identity.roll_shot}
+					disabled
+				/>
+			</div>
+			<div class="flex gap-x-2 items-baseline justify-between">
+				<p class="flex w-28 text-sm text-gray-400 text-left">First name</p>
+				<span class="text-[#423C3C] font-bold text-sm">Sample</span>
+			</div>
+			<div class="flex gap-x-2 items-baseline justify-between">
+				<p class="flex w-28 text-sm text-gray-400 text-left">School</p>
+				<span class="text-[#423C3C] text-sm">{selected_school}</span>
+			</div>
+			<div class="flex gap-x-2 items-baseline justify-between">
+				<p class="flex w-28 text-sm text-gray-400 text-left">Latest status</p>
+				<span class="text-green-600 font-bold italic text-sm">[Status]</span>
+			</div>
 			<a
-				href={high_res_rotated_im_src}
-				data-img={high_res_rotated_im_src}
+				id="idt-image"
+				href={preserve_identity_image.src}
+				data-img={preserve_identity_image.src}
 				data-thumb={img_source}
-				data-alt="This is one option from photos you may select"
+				data-alt="will open photo with identity"
 				data-height="800"
 				data-width="600"
+				class="mt-16 h-9 bg-[#FAFAFA] border border-[#405CF5] rounded text-[#405CF5] text-center font-semibold text-sm flex items-center justify-center"
+				>see identity photo</a
 			>
-				<img src={img_source} alt="This is one option from photos you may select" id="active" />
-			</a>
-		</div>
-
-		<div class="absolute bottom-0 flex flex-col gap-y-2 border w-full">
-			<div class="flex gap-x-3">
-				<div class="flex flex-col gap-x-2">
-					<label for="child_id" class="flex w-28 text-sm text-left">Child id</label>
-					<input
-						type="text"
-						id="child_id"
-						class="border focus:outline-none"
-						bind:value={curr_identity.child_id}
-					/>
-				</div>
-				<div class="flex flex-col gap-x-2">
-					<label for="roll_shot" class="flex w-28 text-sm text-left">#Roll number</label>
-					<input
-						type="text"
-						id="roll_shot"
-						class="border focus:outline-none"
-						bind:value={curr_identity.roll_shot}
-						disabled
-					/>
-				</div>
+			<div class="flex gap-x-3 p-1 mt-12">
 				<div class="flex items-center self-end">
+					{#if ids_with_photos.includes(curr_identity.child_id)}
+						<p class="text-xs font-bold text-yellow-400">Child already has photo</p>
+					{/if}
 					{#if file_rotated_and_saved_show}
 						{#if file_rotated_and_saved_success}
-							<img src={successIcon} alt="success icon" />
+							<img src={successIcon} class="w-6 h-6" alt="success icon" />
 							<p class="text-xs font-bold text-green-700">Photo succesfully copied</p>
 						{:else}
-							<img src={failedIcon} alt="failed icon" />
+							<img src={failedIcon} alt="failed icon" class="w-6 h-6" />
 							<p class="text-xs font-bold text-red-600">Failed copying photo</p>
 						{/if}
 					{/if}
 				</div>
 			</div>
-			<div class="flex gap-x-2 border w-full">
-				<button class="border rounded-md px-4 py-2 bg-white text-gray-800" on:click={go_prev}
-					>Prev</button
-				>
-				<button class="border rounded-md px-4 py-2 bg-white text-gray-800" on:click={go_next}
-					>Next</button
-				>
+		</div>
+		<div class="flex flex-col w-full">
+			<div class="flex items-center justify-end px-2 w-full bg-base-blue">
+				<div class="flex items-center gap-x-1 py-1">
+					<button
+						class={`order h-7 w-14 text-xs font-bold rounded-sm px-4 py-2 flex items-center justify-center ${
+							curr_rot_deg === 90 ? ' text-white bg-blue-400 ' : 'bg-[#F8F9FA] text-font-blue'
+						}`}
+						on:click={() => set_curr_rot_deg(90)}>90°</button
+					>
+					<button
+						class={`order h-7 w-14 text-xs font-bold rounded-sm px-4 py-2 flex items-center justify-center ${
+							curr_rot_deg === 180 ? ' text-white bg-blue-400 ' : 'bg-[#F8F9FA] text-font-blue'
+						}`}
+						on:click={() => set_curr_rot_deg(180)}>180°</button
+					>
+					<button
+						class={`order h-7 w-14 text-xs font-bold rounded-sm px-4 py-2 flex items-center justify-center ${
+							curr_rot_deg === 270 ? ' text-white bg-blue-400 ' : 'bg-[#F8F9FA] text-font-blue'
+						}`}
+						on:click={() => set_curr_rot_deg(270)}>270°</button
+					>
+				</div>
+			</div>
+			<div
+				class="flex flex-col items-center justify-center bg-[#FAFAFA] border w-full min-h-[600px] h-4/5"
+			>
+				<div class="flex w-full items-center justify-center">
+					<div class="flex items-center text-sm gap-x-1">
+						<span class="font-bold text-[#423C3C]">{curr_index + 1}</span>
+						<span class="text-[#423C3C]">of {image_list.length}</span>
+					</div>
+				</div>
+				<div id="images" class="flex items-center justify-center min-h-[520px] border">
+					<a
+						href={high_res_rotated_im.src}
+						data-img={high_res_rotated_im.src}
+						data-thumb={img_source}
+						data-alt="This is one option from photos you may select"
+						data-height="800"
+						data-width="600"
+					>
+						<img
+							class="rounded-sm"
+							src={img_source}
+							alt="This is one option from photos you may select"
+							id="active"
+							width="390"
+							height="520"
+						/>
+					</a>
+				</div>
+				<div class="relative flex w-[392px] items-center justify-between px-1 pt-1">
+					<div
+						class={`absolute items-center justify-center w-full bg-[#EB6262] h-12 left-0 -top-12 rounded-b 
+						${contain_identity ? 'flex' : 'hidden'}`}
+					>
+						<label for="child_id" class="flex w-20 text-sm text-white text-left">Child id</label>
+						<input
+							type="text"
+							id="child_id"
+							bind:this={id_input}
+							class="focus:outline-none w-20 rounded bg-white border border-[F0F0F0] text-[#423C3C] text-sm h-8"
+							bind:value={curr_identity.child_id}
+							disabled={!contain_identity}
+						/>
+					</div>
+					<div>
+						<button
+							class="border border-[#405CF5] rounded text-sm px-2 w-12 h-7 bg-white text-[#405CF5]"
+							on:click={go_prev}>Prev</button
+						>
+						<button
+							class="border border-[#405CF5] rounded text-sm px-2 w-12 h-7 bg-white text-[#405CF5]"
+							on:click={go_next}
+							disabled={!is_child_id}>Next</button
+						>
+					</div>
+					<div class="flex items-center gap-x-1">
+						<label for="contain_identity" class="text-sm text-[#6A6C77]"
+							>current photo contain new identity</label
+						>
+						<input
+							id="contain_identity"
+							type="checkbox"
+							bind:checked={contain_identity}
+							on:change={identity_tick}
+						/>
+					</div>
+				</div>
+			</div>
+			<div class="flex h-16 w-full p-1 gap-x-2 justify-between">
+				<div>
+					<button
+						class="border h-10 w-20 rounded-md bg-green-600 text-white font-bold text-sm"
+						on:click={acceptImage}
+						disabled={contain_identity}>Accept</button
+					>
+					<button
+						class="border h-10 w-20 rounded-md bg-slate-100 text-gray-600 font-bold text-sm"
+						on:click={acceptImage}
+						disabled={contain_identity}>Ineligible</button
+					>
+				</div>
 				<button
-					class={`order rounded-md px-4 py-2 text-gray-800 ${
-						curr_rot_deg === 90 ? 'bg-blue-400 text-white' : 'bg-white'
-					}`}
-					on:click={() => set_curr_rot_deg(rotate90('active'))}>rot 90</button
+					class="border h-10 w-20 rounded-md bg-[#EA4C4C] text-white font-bold text-sm"
+					on:click={acceptImage}
+					disabled={contain_identity}>Reject</button
 				>
-				<button
-					class={`order rounded-md px-4 py-2 text-gray-800 ${
-						curr_rot_deg === 180 ? 'bg-blue-400 text-white' : 'bg-white'
-					}`}
-					on:click={() => set_curr_rot_deg(rotate180('active'))}>rot 180</button
-				>
-				<button
-					class={`order rounded-md px-4 py-2 text-gray-800 ${
-						curr_rot_deg === 270 ? 'bg-blue-400 text-white' : 'bg-white'
-					}`}
-					on:click={() => set_curr_rot_deg(rotate270('active'))}>rot 270</button
-				>
-				<button class="border rounded-md p-8 py-2 bg-green-600 text-gray-200" on:click={acceptImage}
-					>Accept</button
-				>
+			</div>
+		</div>
+		<div class="w-72 h-full bg-[#FAFAFA] border ml-1">
+			<div>
+				<button class="text-xs">Photos in folder</button>
+				<button class="text-xs">Progress</button>
 			</div>
 		</div>
 	</div>
