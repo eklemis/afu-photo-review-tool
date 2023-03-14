@@ -18,3 +18,7 @@ export const rotate_and_copy = async (deg, src_path, dest_path) => {
 export const get_all_child_ids = async (path) => {
 	return await invoke('get_jpg_chil_ids', { folderPath: path });
 };
+
+export const create_nonexist_folders = async (path) => {
+	return await invoke('create_folder_paths', { folderPath: path });
+};

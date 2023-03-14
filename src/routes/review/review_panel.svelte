@@ -12,7 +12,6 @@
 	import failedIcon from '$lib/images/error.svg';
 
 	import '@fancyapps/ui/dist/fancybox/fancybox.css';
-	import { rotate90, rotate180 } from '$lib/rotate_front_end.js';
 	import BiggerPicture from 'bigger-picture/svelte';
 	import 'bigger-picture/css';
 
@@ -28,14 +27,6 @@
 	let contain_identity = false;
 	let ids_with_photos = [];
 
-	let identity_image = {
-		path: '',
-		src: ''
-	};
-	let preserve_identity_image = {
-		path: '',
-		src: ''
-	};
 	const set_new_identity = (new_idt) => {
 		preserve_identity_image = Object.assign({}, identity_image);
 		identity_image = { ...new_idt };
@@ -91,7 +82,7 @@
 			e.preventDefault();
 			if (identity_image.path !== preserve_identity_image.path) {
 				console.log('Getting higher res identity image');
-				get_higher_rotated_image(identity_image.path, curr_rot_deg).then((img_src) => {
+				get_higher_rotated_image(identity_image.path, identity_image.rot).then((img_src) => {
 					identity_image.src = img_src;
 					preserve_identity_image = Object.assign({}, identity_image);
 					console.log('got new identity image:', preserve_identity_image);
@@ -125,8 +116,35 @@
 	let high_res_rotated_im = { src: '', path: '' };
 	let img_source = '';
 	let img_path = '';
+	let ratio_base = 300;
+	let ratio_three = ratio_base * 3;
+	let ratio_four = ratio_base * 4;
+	let img_width = ratio_three;
+	let img_height = ratio_four;
+	$: if (curr_rot_deg == 0) {
+		img_width = ratio_four;
+		img_height = ratio_three;
+	} else {
+		img_width = ratio_three;
+		img_height = ratio_four;
+	}
 	const getPhoto = async (path) => {
 		img_source = await invoke('get_rotated_image_tumb', { srcPath: path, deg: curr_rot_deg });
+	};
+
+	let identity_image = {
+		path: '',
+		src: '',
+		rot: 0,
+		width: img_width,
+		height: img_height
+	};
+	let preserve_identity_image = {
+		path: '',
+		src: '',
+		rot: 0,
+		width: img_width,
+		height: img_height
 	};
 
 	let curr_index = 0;
@@ -141,7 +159,13 @@
 		if (contain_identity) {
 			curr_identity.child_id = '113';
 			//reset identity photo
-			set_new_identity({ path: image_list[curr_index], src: img_source });
+			set_new_identity({
+				path: image_list[curr_index],
+				src: img_source,
+				rot: curr_rot_deg,
+				width: img_width,
+				height: img_height
+			});
 			id_input.focus();
 		}
 	};
@@ -174,11 +198,34 @@
 		getCurrentPhoto();
 	};
 
+	const reset_identity_images = () => {
+		identity_image.src = img_src;
+		identity_image.deg = curr_rot_deg;
+		preserve_identity_image.src = img_src;
+		preserve_identity_image.deg = curr_rot_deg;
+		identity_image.width = img_width;
+		identity_image.height = img_height;
+		preserve_identity_image.width = img_width;
+		preserve_identity_image.height = img_height;
+	};
 	const set_curr_rot_deg = (new_deg) => {
 		if (new_deg !== curr_rot_deg) {
 			curr_rot_deg = new_deg;
 			getCurrentPhoto();
+			if (contain_identity) {
+				get_higher_rotated_image(identity_image.path, curr_rot_deg).then((img_src) => {
+					reset_identity_images();
+				});
+			}
 		}
+		// this request is to tuned-off the rotation
+		else {
+			curr_rot_deg = 0;
+			get_higher_rotated_image(identity_image.path, curr_rot_deg).then((img_src) => {
+				reset_identity_images();
+			});
+		}
+		getCurrentPhoto();
 	};
 	let file_rotated_and_saved_show = false;
 	let file_rotated_and_saved_success = false;
@@ -189,8 +236,6 @@
 		let dest_path = main_dest_path + selected_school + '\\' + dest_base_name;
 		console.log('dest_path:', dest_path);
 		get_all_child_ids(main_dest_path + selected_school).then((ids) => (ids_with_photos = ids));
-		//console.log('source basename:', base_name);
-		//console.log('dest basename:', dest_base_name);
 		setTimeout(() => {
 			file_rotated_and_saved_show = true;
 			file_rotated_and_saved_success = rotate_and_copy(curr_rot_deg, img_path, dest_path);
@@ -241,8 +286,8 @@
 				data-img={preserve_identity_image.src}
 				data-thumb={img_source}
 				data-alt="will open photo with identity"
-				data-height="800"
-				data-width="600"
+				data-height={preserve_identity_image.height}
+				data-width={preserve_identity_image.width}
 				class="mt-16 h-9 bg-[#FAFAFA] border border-[#405CF5] rounded text-[#405CF5] text-center font-semibold text-sm flex items-center justify-center"
 				>see identity photo</a
 			>
@@ -300,9 +345,9 @@
 						href={high_res_rotated_im.src}
 						data-img={high_res_rotated_im.src}
 						data-thumb={img_source}
+						data-height={img_height}
+						data-width={img_width}
 						data-alt="This is one option from photos you may select"
-						data-height="800"
-						data-width="600"
 					>
 						<img
 							class="rounded-sm"

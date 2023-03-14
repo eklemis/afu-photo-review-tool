@@ -1,7 +1,9 @@
 <script>
 	// @ts-nocheck
-	import { photo_paths, selectedSchool } from '../lib/store';
+	import { photo_paths, mainDestPath, selectedSchool } from '../lib/store';
 	import { invoke } from '@tauri-apps/api/tauri';
+	import { create_nonexist_folders } from '$lib/rust_functions';
+	import { onDestroy } from 'svelte';
 	const photographers = [
 		'Arini',
 		'Arias',
@@ -24,15 +26,21 @@
 	let is_path_exist = false;
 	let school = '';
 
+	//setup paths
+	let main_dest_path = '';
+	const unsub_mainDestPath = mainDestPath.subscribe((value) => (main_dest_path = value));
 	/**
 	 * @type {string[]}
 	 */
 	let fileList = [];
 	const check_path = async () => {
 		is_path_exist = await invoke('is_path_exist', { path });
-		fileList = await invoke('get_file_list', { folderPath: path });
-		photo_paths.set(fileList);
+		if (is_path_exist) {
+			fileList = await invoke('get_file_list', { folderPath: path });
+			photo_paths.set(fileList);
+		}
 	};
+	onDestroy(unsub_mainDestPath);
 </script>
 
 <div class="p-5 flex flex-col gap-y-4 h-screen w-full">
@@ -75,7 +83,11 @@
 	</div>
 	<a
 		href="/review"
-		on:click={() => selectedSchool.set(school)}
+		on:click={() => {
+			selectedSchool.set(school);
+			const _path = `${main_dest_path}${school}`;
+			create_nonexist_folders(_path);
+		}}
 		class={`bg-red-500 rounded-md p-2 text-white text-center ${
 			is_path_exist ? '' : 'pointer-events-none'
 		}`}>Start Review</a

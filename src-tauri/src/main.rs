@@ -15,6 +15,9 @@ use image::io::Reader as ImageReader;
 use image::imageops::FilterType;
 use std::io::Cursor;
 use base64::{Engine as _, engine::general_purpose};
+use std::fs;
+
+
 
 fn image_to_base64(img:DynamicImage)->String{
     let mut image_data: Vec<u8> = Vec::new();
@@ -44,7 +47,7 @@ fn res_image(img: DynamicImage, higher:bool)->DynamicImage{
     let nwidth: u32;
     let nheight: u32;
     if higher{
-        (nwidth, nheight) = resized_width_height(img.width(), img.height(),(840, 1120));        
+        (nwidth, nheight) = resized_width_height(img.width(), img.height(),(1050, 1400));        
     }
     else{
         (nwidth, nheight) = resized_width_height(img.width(), img.height(), (450, 600));
@@ -92,7 +95,8 @@ fn get_rotated_image(src_path:&str, deg:u32)->String{
         .unwrap()
         .decode()
         .unwrap();
-    let res_img = resized_image_higher(img);
+    let res_img: DynamicImage= resized_image_higher(img);
+
     let rot_image = rotate_image(res_img, deg);
     let base64 = image_to_base64(rot_image);
     format!("data:image/png;base64,{}", base64)
@@ -105,6 +109,12 @@ fn get_ocr_info(_src_path: &str, _deg:u32)->String{
 #[tauri::command]
 fn is_path_exist(path:&str) -> bool{
     Path::new(path).exists()
+}
+#[tauri::command]
+fn create_folder_paths(folder_path: &str)->bool{
+    println!("create paths {}",folder_path);
+    fs::create_dir_all(folder_path).unwrap();
+    return true;
 }
 
 #[tauri::command]
@@ -214,7 +224,7 @@ fn rotate_and_copy(deg:u32, src_path:&str, dest_path:&str)->bool{
 }
 fn main() {
   tauri::Builder::default()
-    .invoke_handler(tauri::generate_handler![is_path_exist, get_file_list, get_photo, get_ocr_info, get_rotated_image, get_rotated_image_tumb, rotate_and_copy, get_jpg_chil_ids, jpg_count])
+    .invoke_handler(tauri::generate_handler![is_path_exist, get_file_list, get_photo, get_ocr_info, get_rotated_image, get_rotated_image_tumb, rotate_and_copy, get_jpg_chil_ids, jpg_count, create_folder_paths])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
 }

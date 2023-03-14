@@ -22,7 +22,10 @@ walkdir = "2.3.2"
 image = "0.24.5"
 base64 = "0.21.0"
 fast_image_resize = "2.6.0"
-prisma-client-rust = { git = "https://github.com/Brendonovich/prisma-client-rust", tag = "0.6.5" }
+#prisma-client-rust = { git = "https://github.com/Brendonovich/prisma-client-rust", tag = "0.6.5" }
+#diesel = { version = "2.0.0", features = ["postgres"] }
+#dotenvy = "0.15"
+#prisma = { path = "node_modules/.prisma/client" }
 
 [features]
 # by default Tauri runs in production mode
