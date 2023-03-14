@@ -6,7 +6,8 @@
 	import {
 		get_higher_rotated_image,
 		rotate_and_copy,
-		get_all_child_ids
+		get_all_child_ids,
+		create_nonexist_folders
 	} from '$lib/rust_functions';
 	import successIcon from '$lib/images/success.svg';
 	import failedIcon from '$lib/images/error.svg';
@@ -113,6 +114,9 @@
 	const MAX_LAST_IMAGES = 10;
 	let last_images = [];
 
+	let rejected_folder_checked = false;
+	let fresh_start = true;
+
 	let high_res_rotated_im = { src: '', path: '' };
 	let img_source = '';
 	let img_path = '';
@@ -167,6 +171,7 @@
 				height: img_height
 			});
 			id_input.focus();
+			fresh_start = false;
 		}
 	};
 	$: if (image_list[curr_index]) {
@@ -230,8 +235,7 @@
 	let file_rotated_and_saved_show = false;
 	let file_rotated_and_saved_success = false;
 	const acceptImage = () => {
-		console.log('img path:', img_path);
-		let base_name = img_path.split('\\').pop();
+		//let base_name = img_path.split('\\').pop();
 		let dest_base_name = curr_identity.child_id + '_' + curr_identity.roll_shot + '.JPG';
 		let dest_path = main_dest_path + selected_school + '\\' + dest_base_name;
 		console.log('dest_path:', dest_path);
@@ -242,8 +246,50 @@
 			setTimeout(() => {
 				file_rotated_and_saved_show = false;
 				get_all_child_ids(main_dest_path + selected_school).then((ids) => (ids_with_photos = ids));
-			}, 3000);
+			}, 3500);
 		}, 0);
+	};
+	const rejectImage = async () => {
+		//Destination path for selected photo
+		let dest_base_name = curr_identity.child_id + '_' + curr_identity.roll_shot + '.JPG';
+		let base_path_only = main_dest_path + 'Rejecteds\\' + selected_school;
+		let dest_path = base_path_only + '\\' + dest_base_name;
+		//Destination path for identity photo
+		let dest_base_name_idt = curr_identity.child_id + '_IDENTITY.JPG';
+		let dest_path_idt = base_path_only + '\\' + dest_base_name_idt;
+		//Create necessary folder if not exists
+		if (!rejected_folder_checked) {
+			create_nonexist_folders(base_path_only).then((res) => {
+				rotate_and_copy(curr_rot_deg, img_path, dest_path).then((success_cp) => {
+					if (success_cp) {
+						rotate_and_copy(identity_image.rot, identity_image.path, dest_path_idt).then(
+							(all_success) => {
+								file_rotated_and_saved_show = all_success;
+								setTimeout(() => {
+									file_rotated_and_saved_show = false;
+								}, 3500);
+							}
+						);
+					}
+				});
+				rejected_folder_checked = true;
+			});
+		} else {
+			rotate_and_copy(curr_rot_deg, img_path, dest_path).then((success_cp) => {
+				if (success_cp) {
+					rotate_and_copy(identity_image.rot, identity_image.path, dest_path_idt).then(
+						(all_success) => {
+							file_rotated_and_saved_show = all_success;
+							setTimeout(() => {
+								file_rotated_and_saved_show = false;
+							}, 3500);
+						}
+					);
+				}
+			});
+		}
+
+		//console.log('dest_path:', dest_path);
 	};
 </script>
 
@@ -382,7 +428,7 @@
 						<button
 							class="border border-[#405CF5] rounded text-sm px-2 w-12 h-7 bg-white text-[#405CF5]"
 							on:click={go_next}
-							disabled={!is_child_id}>Next</button
+							disabled={!is_child_id && !fresh_start}>Next</button
 						>
 					</div>
 					<div class="flex items-center gap-x-1">
@@ -407,13 +453,13 @@
 					>
 					<button
 						class="border h-10 w-20 rounded-md bg-slate-100 text-gray-600 font-bold text-sm"
-						on:click={acceptImage}
+						on:click={() => {}}
 						disabled={contain_identity}>Ineligible</button
 					>
 				</div>
 				<button
 					class="border h-10 w-20 rounded-md bg-[#EA4C4C] text-white font-bold text-sm"
-					on:click={acceptImage}
+					on:click={rejectImage}
 					disabled={contain_identity}>Reject</button
 				>
 			</div>
