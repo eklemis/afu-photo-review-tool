@@ -90,7 +90,10 @@
 		} // grab image links
 		function openGalleryDt(e) {
 			e.preventDefault();
-			if (identity_image.path !== preserve_identity_image.path) {
+			if (
+				identity_image.path !== preserve_identity_image.path ||
+				identity_image.rot !== preserve_identity_image.rot
+			) {
 				console.log('Getting higher res identity image');
 				get_higher_rotated_image(identity_image.path, identity_image.rot).then((img_src) => {
 					identity_image.src = img_src;
