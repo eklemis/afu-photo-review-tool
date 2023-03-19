@@ -1,2 +1,3 @@
 [alias]
-prisma = "run -p <prisma crate name> --"
+prisma = "run -p prisma-cli --bin prisma --"
+prisma-sync = "run -p prisma-cli --bin sync --"

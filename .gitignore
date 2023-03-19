@@ -9,8 +9,10 @@ node_modules
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 src-tauri/target
+src-tauri/src/data/prisma.rs
 .svelte-kit
 *.lock
 *.log
 .gitignore
 .npmrc
+*.db

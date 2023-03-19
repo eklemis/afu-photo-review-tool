@@ -2,8 +2,8 @@
 	// @ts-nocheck
 	import { photo_paths, mainDestPath, selectedSchool } from '../lib/store';
 	import { invoke } from '@tauri-apps/api/tauri';
-	import { create_nonexist_folders } from '$lib/rust_functions';
-	import { onDestroy } from 'svelte';
+	import { create_nonexist_folders, get_all_schools } from '$lib/rust_functions';
+	import { onDestroy, onMount } from 'svelte';
 	const photographers = [
 		'Arini',
 		'Arias',
@@ -33,6 +33,7 @@
 	 * @type {string[]}
 	 */
 	let fileList = [];
+	let schools = [];
 	const check_path = async () => {
 		is_path_exist = await invoke('is_path_exist', { path });
 		if (is_path_exist) {
@@ -40,6 +41,11 @@
 			photo_paths.set(fileList);
 		}
 	};
+	onMount(async () => {
+		await get_all_schools().then((all_schools) => {
+			schools = all_schools;
+		});
+	});
 	onDestroy(unsub_mainDestPath);
 </script>
 
@@ -60,24 +66,13 @@
 		<label for="school" class="block text-sm font-medium leading-6 text-gray-900"
 			>Enter school name</label
 		>
-		<input
-			type="text"
+		<select
 			bind:value={school}
 			id="school"
 			class="block w-full rounded-md border-0 py-1.5 px-4 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:outline-none focus:ring-indigo-600 sm:text-sm sm:leading-6"
-		/>
-	</div>
-	<div>
-		<label for="photographers" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
-			>Select photographer</label
 		>
-		<select
-			id="photographers"
-			name="photographers"
-			class="focus:outline-none px-4 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-		>
-			{#each photographers as pg ('op-' + pg)}
-				<option value={pg}>{pg}</option>
+			{#each schools as school (school)}
+				<option value={school}>{school}</option>
 			{/each}
 		</select>
 	</div>

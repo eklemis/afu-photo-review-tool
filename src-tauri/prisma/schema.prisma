@@ -1,0 +1,33 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+generator client {
+    provider = "cargo prisma"
+    output   = "../src/data/prisma.rs"
+}
+
+datasource db {
+    provider = "sqlite"
+    url      = env("DATABASE_URL")
+}
+
+model photographers {
+    id   Int    @id
+    name String
+    afu  afu[]
+}
+
+model afu {
+    id            Int            @id @default(autoincrement())
+    child_id      Int            @unique
+    child_name    String
+    sex           String
+    last_grade    String
+    last_status   String
+    school        String
+    community     String
+    Photographer  photographers? @relation(fields: [pg_id], references: [id])
+    pg_id         Int?           @default(0)
+    smile_score   Int            @default(0)
+    bg_score      Int            @default(0)
+    clarity_score Int            @default(0)
+}

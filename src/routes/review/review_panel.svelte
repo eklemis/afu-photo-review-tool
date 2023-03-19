@@ -7,7 +7,10 @@
 		get_higher_rotated_image,
 		rotate_and_copy,
 		get_all_child_ids,
-		create_nonexist_folders
+		create_nonexist_folders,
+		get_afu_of,
+		get_all_photographers,
+		get_photographer_of
 	} from '$lib/rust_functions';
 	import successIcon from '$lib/images/success.svg';
 	import failedIcon from '$lib/images/error.svg';
@@ -15,6 +18,7 @@
 	import '@fancyapps/ui/dist/fancybox/fancybox.css';
 	import BiggerPicture from 'bigger-picture/svelte';
 	import 'bigger-picture/css';
+	import ProgressPanel from './progress_panel.svelte';
 
 	//setup paths
 	let main_dest_path = '';
@@ -27,6 +31,7 @@
 	let curr_rot_deg = 0;
 	let contain_identity = false;
 	let ids_with_photos = [];
+	let ids_with_photos_inel = [];
 
 	const set_new_identity = (new_idt) => {
 		preserve_identity_image = Object.assign({}, identity_image);
@@ -58,11 +63,15 @@
 		function openGallery(e) {
 			e.preventDefault();
 			//console.log('bp:', bp);
-			if (image_list[curr_index] !== high_res_rotated_im.path) {
+			if (
+				image_list[curr_index] !== high_res_rotated_im.path ||
+				high_res_rotated_im.deg !== curr_rot_deg
+			) {
 				console.log('Get higher res image');
 				get_higher_rotated_image(image_list[curr_index], curr_rot_deg).then((img_src) => {
 					high_res_rotated_im.src = img_src;
 					high_res_rotated_im.path = image_list[curr_index];
+					high_res_rotated_im.deg = curr_rot_deg;
 					setTimeout(() => {
 						bp.open({
 							items: imageLinks,
@@ -108,6 +117,9 @@
 			getPhoto(image_list[curr_index]);
 		}
 		get_all_child_ids(main_dest_path + selected_school).then((ids) => (ids_with_photos = ids));
+		get_all_child_ids(main_dest_path + 'Ineligibles\\' + selected_school).then(
+			(ids) => (ids_with_photos_inel = ids)
+		);
 	});
 
 	//UNIMPLEMENTED caching mechanism
@@ -117,7 +129,7 @@
 	let rejected_folder_checked = false;
 	let fresh_start = true;
 
-	let high_res_rotated_im = { src: '', path: '' };
+	let high_res_rotated_im = { src: '', path: '', deg: 0 };
 	let img_source = '';
 	let img_path = '';
 	let ratio_base = 300;
@@ -125,7 +137,7 @@
 	let ratio_four = ratio_base * 4;
 	let img_width = ratio_three;
 	let img_height = ratio_four;
-	$: if (curr_rot_deg == 0) {
+	$: if (curr_rot_deg === 0) {
 		img_width = ratio_four;
 		img_height = ratio_three;
 	} else {
@@ -159,6 +171,52 @@
 		child_id: '113',
 		roll_shot: ''
 	};
+	let curr_afu = {
+		child_id: 0,
+		child_name: '',
+		sex: '',
+		last_grade: '',
+		last_status: '',
+		school: '',
+		community: '',
+		pg_id: 0,
+		smile_score: 0,
+		bg_score: 0,
+		clarity_score: 0
+	};
+	let curr_pg = {
+		id: 0,
+		name: 0
+	};
+	const refreshCollectedList = async () => {
+		if (curr_afu.school && curr_afu.school.trim().length > 0) {
+			selected_school = curr_afu.school;
+		}
+		await get_all_child_ids(main_dest_path + selected_school).then(
+			(ids) => (ids_with_photos = ids)
+		);
+		await get_all_child_ids(main_dest_path + 'Ineligibles\\' + selected_school).then(
+			(ids) => (ids_with_photos_inel = ids)
+		);
+		console.log('Collected Elig Of ', selected_school, ids_with_photos);
+		console.log('Collected INElig Of ', selected_school, ids_with_photos_inel);
+	};
+	$: if (curr_afu.pg_id === 0 && curr_pg.id === 0) {
+		get_photographer_of(selected_school).then((pg) => {
+			curr_pg = pg;
+			console.log(`Initialize PG ${selected_school}: ${curr_pg.id}, ${curr_pg.name}`);
+			refreshCollectedList();
+			refresh_chart = true;
+		});
+	} else if (curr_afu.pg_id !== 0 && curr_afu.pg_id !== curr_pg.id) {
+		get_all_photographers().then((pgs) => {
+			curr_pg = pgs.filter((pg) => pg.id === curr_afu.pg_id)[0];
+			console.log('PG Change By Child Id:', curr_pg.id, curr_pg.name);
+			refreshCollectedList();
+			refresh_chart = true;
+		});
+	}
+	/*$: console.log('curr_pg:', curr_pg);*/
 	const identity_tick = () => {
 		if (contain_identity) {
 			curr_identity.child_id = '113';
@@ -177,9 +235,12 @@
 	$: if (image_list[curr_index]) {
 		let _path = image_list[curr_index];
 		let _path_splitted = _path.split('\\');
-		curr_identity.roll_shot = _path_splitted[_path_splitted.length - 1]
-			.replace('DSC0', '')
-			.replace('.JPG', '');
+		let _last_part = _path_splitted[_path_splitted.length - 1].replace('.JPG', '');
+		let _roll_shot = _last_part;
+		if (_last_part.length > 3) {
+			_roll_shot = _last_part.substring(_last_part.length - 4);
+		}
+		curr_identity.roll_shot = _roll_shot;
 	}
 
 	let is_child_id = false;
@@ -204,9 +265,9 @@
 	};
 
 	const reset_identity_images = () => {
-		identity_image.src = img_src;
+		identity_image.src = img_source;
 		identity_image.deg = curr_rot_deg;
-		preserve_identity_image.src = img_src;
+		preserve_identity_image.src = img_source;
 		preserve_identity_image.deg = curr_rot_deg;
 		identity_image.width = img_width;
 		identity_image.height = img_height;
@@ -224,9 +285,11 @@
 			}
 		}
 		// this request is to tuned-off the rotation
+		// BUG HERE
 		else {
 			curr_rot_deg = 0;
-			get_higher_rotated_image(identity_image.path, curr_rot_deg).then((img_src) => {
+			get_higher_rotated_image(img_path, curr_rot_deg).then((img_src) => {
+				img_source = img_src;
 				reset_identity_images();
 			});
 		}
@@ -234,8 +297,18 @@
 	};
 	let file_rotated_and_saved_show = false;
 	let file_rotated_and_saved_success = false;
+	let refresh_chart = true;
+	const turnOffRefresh = () => {
+		refresh_chart = false;
+		console.log('Refresh Turned OFF!');
+	};
+	$: if (file_rotated_and_saved_success) {
+		refresh_chart = true;
+	}
+
 	const acceptImage = () => {
 		//let base_name = img_path.split('\\').pop();
+		selected_school = curr_afu.school;
 		let dest_base_name = curr_identity.child_id + '_' + curr_identity.roll_shot + '.JPG';
 		let dest_path = main_dest_path + selected_school + '\\' + dest_base_name;
 		console.log('dest_path:', dest_path);
@@ -245,12 +318,14 @@
 			file_rotated_and_saved_success = rotate_and_copy(curr_rot_deg, img_path, dest_path);
 			setTimeout(() => {
 				file_rotated_and_saved_show = false;
-				get_all_child_ids(main_dest_path + selected_school).then((ids) => (ids_with_photos = ids));
+				refreshCollectedList();
 			}, 3500);
 		}, 0);
 	};
+	const moveWithIdentity = async () => {};
 	const rejectImage = async () => {
 		//Destination path for selected photo
+		selected_school = curr_afu.school;
 		let dest_base_name = curr_identity.child_id + '_' + curr_identity.roll_shot + '.JPG';
 		let base_path_only = main_dest_path + 'Rejecteds\\' + selected_school;
 		let dest_path = base_path_only + '\\' + dest_base_name;
@@ -288,9 +363,8 @@
 				}
 			});
 		}
-
-		//console.log('dest_path:', dest_path);
 	};
+	const moveToIneligible = () => {};
 </script>
 
 <div class="flex flex-col h-[100%] min-h-full content-center justify-center border-dashed">
@@ -300,7 +374,7 @@
 			<div class="flex gap-x-2 items-baseline justify-between">
 				<p class="flex w-28 text-sm text-gray-400 text-left">Child id</p>
 				<span class="focus:outline-none w-16 bg-white border-b text-[#423C3C] text-sm"
-					>{curr_identity.child_id}</span
+					>{curr_afu.child_id}</span
 				>
 			</div>
 			<div class="flex gap-x-2 items-baseline justify-between">
@@ -316,15 +390,21 @@
 			</div>
 			<div class="flex gap-x-2 items-baseline justify-between">
 				<p class="flex w-28 text-sm text-gray-400 text-left">First name</p>
-				<span class="text-[#423C3C] font-bold text-sm">Sample</span>
+				<span class="text-[#423C3C] font-bold text-sm">{curr_afu.child_name.split(' ')[0]}</span>
 			</div>
 			<div class="flex gap-x-2 items-baseline justify-between">
-				<p class="flex w-28 text-sm text-gray-400 text-left">School</p>
-				<span class="text-[#423C3C] text-sm">{selected_school}</span>
+				<p class="flex text-sm text-gray-400 text-left">School</p>
+				<span class="text-[#423C3C] text-sm">{curr_afu.school}</span>
 			</div>
 			<div class="flex gap-x-2 items-baseline justify-between">
 				<p class="flex w-28 text-sm text-gray-400 text-left">Latest status</p>
-				<span class="text-green-600 font-bold italic text-sm">[Status]</span>
+				{#if curr_afu.last_status === 'Eligible'}
+					<span class={'font-bold italic text-sm text-green-600'}>{curr_afu.last_status}</span>
+				{:else}
+					<span class={'font-bold italic underline text-sm text-yellow-500'}
+						>{curr_afu.last_status}</span
+					>
+				{/if}
 			</div>
 			<a
 				id="idt-image"
@@ -335,7 +415,7 @@
 				data-height={preserve_identity_image.height}
 				data-width={preserve_identity_image.width}
 				class="mt-16 h-9 bg-[#FAFAFA] border border-[#405CF5] rounded text-[#405CF5] text-center font-semibold text-sm flex items-center justify-center"
-				>see identity photo</a
+				>See identity photo</a
 			>
 			<div class="flex gap-x-3 p-1 mt-12">
 				<div class="flex items-center self-end">
@@ -417,6 +497,11 @@
 							bind:this={id_input}
 							class="focus:outline-none w-20 rounded bg-white border border-[F0F0F0] text-[#423C3C] text-sm h-8"
 							bind:value={curr_identity.child_id}
+							on:keyup={async () => {
+								if (is_child_id) {
+									curr_afu = await get_afu_of(curr_identity.child_id);
+								}
+							}}
 							disabled={!contain_identity}
 						/>
 					</div>
@@ -433,7 +518,7 @@
 					</div>
 					<div class="flex items-center gap-x-1">
 						<label for="contain_identity" class="text-sm text-[#6A6C77]"
-							>current photo contain new identity</label
+							>current photo contains new identity</label
 						>
 						<input
 							id="contain_identity"
@@ -464,10 +549,20 @@
 				>
 			</div>
 		</div>
-		<div class="w-72 h-full bg-[#FAFAFA] border ml-1">
+		<div class="h-full bg-[#FAFAFA] w-[500px] border ml-1">
 			<div>
 				<button class="text-xs">Photos in folder</button>
 				<button class="text-xs">Progress</button>
+			</div>
+			<div>
+				<ProgressPanel
+					photographer={curr_pg}
+					school={curr_afu.school === '' ? selected_school : curr_afu.school}
+					collected_elig_ids={ids_with_photos}
+					collected_inelig_ids={ids_with_photos_inel}
+					should_refresh={refresh_chart}
+					on:refreshed={turnOffRefresh}
+				/>
 			</div>
 		</div>
 	</div>

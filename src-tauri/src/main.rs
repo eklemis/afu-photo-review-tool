@@ -2,6 +2,10 @@
   all(not(debug_assertions), target_os = "windows"),
   windows_subsystem = "windows"
 )]
+//Database requirements
+pub mod data;
+
+use crate::data::{Afu, get_afu, Stat, get_pg_school_stats, get_pg_stats, Photographer, get_photographers, get_schools, get_photographer_of};
 use std::time::{Duration, Instant};
 extern crate walkdir;
 extern crate image;
@@ -91,6 +95,7 @@ fn get_rotated_image_tumb(src_path:&str, deg:u32)->String{
 }
 #[tauri::command]
 fn get_rotated_image(src_path:&str, deg:u32)->String{
+    println!("Req. rot for {} with {}",&src_path, deg);
     let img = ImageReader::open(src_path)
         .unwrap()
         .decode()
@@ -222,9 +227,71 @@ fn rotate_and_copy(deg:u32, src_path:&str, dest_path:&str)->bool{
     }
     false
 }
+#[tauri::command]
+fn import_excel(excel_path:&str){
+    println!("Request add photoraphers");
+    data::import_excel_to_sqlite(excel_path);
+}
+#[tauri::command]
+fn get_afu_of(child_id: i32)->Afu{
+    if let Ok(afu_row) = get_afu(child_id){
+        return afu_row;
+    }
+    Afu {
+        child_id:0,
+        child_name:String::from(""),
+        sex:String::from(""),
+        last_grade:String::from(""),
+        last_status:String::from(""),
+        school:String::from(""),
+        community:String::from(""),
+        pg_id: 0,
+        smile_score:0,
+        bg_score:0,
+        clarity_score:0
+    }
+}
+#[tauri::command]
+fn get_pg_stat_byschool(pg_id:i32, school: &str)->Stat{
+    
+    if let Ok(_stat) = get_pg_school_stats(pg_id, &school){
+        return _stat;
+    }
+    Stat {
+        school: String::from(""),
+        num_elig: 0,
+        num_inelig:0
+    }
+}
+#[tauri::command]
+fn get_pg_stats_all(pg_id:i32)->Vec<Stat>{
+    let all_stas:Vec<Stat> = Vec::new();
+
+    if let Ok(stats) = get_pg_stats(pg_id){
+        return stats;
+    }
+
+    all_stas
+}
+#[tauri::command]
+fn get_all_photographers()->Vec<Photographer>{
+    let all_pgs:Vec<Photographer> = Vec::new();
+    if let Ok(pgs) = get_photographers(){
+        return pgs;
+    }
+    all_pgs
+}
+#[tauri::command]
+fn get_all_schools()->Vec<String>{
+    let mut schools:Vec<String>= Vec::new();
+    if let Ok(_schools) = get_schools(){
+        return _schools;
+    }
+    schools
+}
 fn main() {
   tauri::Builder::default()
-    .invoke_handler(tauri::generate_handler![is_path_exist, get_file_list, get_photo, get_ocr_info, get_rotated_image, get_rotated_image_tumb, rotate_and_copy, get_jpg_chil_ids, jpg_count, create_folder_paths])
+    .invoke_handler(tauri::generate_handler![is_path_exist, get_file_list, get_photo, get_ocr_info, get_rotated_image, get_rotated_image_tumb, rotate_and_copy, get_jpg_chil_ids, jpg_count, create_folder_paths, import_excel, get_afu_of,  get_pg_stat_byschool, get_pg_stats_all, get_all_photographers, get_all_schools, get_photographer_of])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
 }

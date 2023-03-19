@@ -39,7 +39,9 @@
 	"type": "module",
 	"dependencies": {
 		"@fancyapps/ui": "^5.0.6",
+		"@prisma/client": "^4.8.0",
 		"@tauri-apps/api": "^1.2.0",
-		"bigger-picture": "^1.1.7"
+		"bigger-picture": "^1.1.7",
+		"chart.js": "^4.2.1"
 	}
 }
