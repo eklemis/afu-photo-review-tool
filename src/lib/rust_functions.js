@@ -43,7 +43,8 @@ export const get_pg_stat_byschool = async (pg_id, school) => {
 };
 
 export const get_pg_stats_all = async (pg_id) => {
-	return await invoke('get_pg_stats_all', { pgId: Number(pg_id) });
+	const all_stats = await invoke('get_pg_stats_all', { pgId: Number(pg_id) });
+	return all_stats;
 };
 
 export const get_all_photographers = async () => {

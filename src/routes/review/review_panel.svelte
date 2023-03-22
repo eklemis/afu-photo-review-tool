@@ -203,6 +203,7 @@
 		);
 		console.log('Collected Elig Of ', selected_school, ids_with_photos);
 		console.log('Collected INElig Of ', selected_school, ids_with_photos_inel);
+		refresh_chart = true;
 	};
 	$: if (curr_afu.pg_id === 0 && curr_pg.id === 0) {
 		get_photographer_of(selected_school).then((pg) => {
@@ -367,7 +368,29 @@
 			});
 		}
 	};
-	const moveToIneligible = () => {};
+	const moveToIneligible = () => {
+		//Destination path for selected photo
+		selected_school = curr_afu.school;
+		let dest_base_name = curr_identity.child_id + '_' + curr_identity.roll_shot + '.JPG';
+		let base_path_only = main_dest_path + 'Ineligibles\\' + selected_school;
+		let dest_path = base_path_only + '\\' + dest_base_name;
+
+		//Create necessary folder if not exists
+
+		create_nonexist_folders(base_path_only).then((res) => {
+			rotate_and_copy(curr_rot_deg, img_path, dest_path).then((success_cp) => {
+				file_rotated_and_saved_success = true;
+				file_rotated_and_saved_show = success_cp;
+				refreshCollectedList();
+				setTimeout(() => {
+					file_rotated_and_saved_show = false;
+					setTimeout(() => {
+						file_rotated_and_saved_success = false;
+					}, 3500);
+				}, 3500);
+			});
+		});
+	};
 </script>
 
 <div class="flex flex-col h-[100%] min-h-full content-center justify-center border-dashed">
@@ -537,12 +560,12 @@
 					<button
 						class="border h-10 w-20 rounded-md bg-green-600 text-white font-bold text-sm"
 						on:click={acceptImage}
-						disabled={contain_identity}>Accept</button
+						disabled={contain_identity || curr_afu.last_status === 'Ineligible'}>Accept</button
 					>
 					<button
 						class="border h-10 w-20 rounded-md bg-slate-100 text-gray-600 font-bold text-sm"
-						on:click={() => {}}
-						disabled={contain_identity}>Ineligible</button
+						on:click={moveToIneligible}
+						disabled={!is_child_id}>Ineligible</button
 					>
 				</div>
 				<button

@@ -221,6 +221,17 @@ pub fn get_pg_school_stats(pg_id: i32, school:&str)->Result<Stat>{
     })
 }
 pub fn get_pg_stats(pg_id: i32)->Result<Vec<Stat>>{
+    if pg_id == 0 {
+        println!("PG 0 COMING...");
+        let mut stats = Vec::new();
+        
+        stats.push(Stat {
+            school: String::from("NOT SET"),
+            num_elig: 0,
+            num_inelig: 0
+        });
+       return Ok(stats);
+    }
     let conn = Connection::open("data.db")?;
     let stats_sql = "SELECT 
                                 school,

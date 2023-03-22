@@ -85,7 +85,7 @@
 		ctx = document.getElementById('myChart');
 
 		const DATA_COUNT = 2;
-		const NUMBER_CFG = { count: DATA_COUNT, min: 0, max: 100 };
+		const NUMBER_CFG = { count: DATA_COUNT, min: 0, max: 300 };
 
 		const config = {
 			type: 'bar',
