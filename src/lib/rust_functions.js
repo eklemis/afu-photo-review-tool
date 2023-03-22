@@ -58,3 +58,7 @@ export const get_all_schools = async () => {
 export const get_photographer_of = async (school) => {
 	return await invoke('get_photographer_of', { school: school });
 };
+
+export const get_child_ids_of = async (pg_id, school) => {
+	return await invoke('get_child_ids_of', { pgId: pg_id, school: school });
+};

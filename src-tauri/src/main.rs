@@ -5,7 +5,7 @@
 //Database requirements
 pub mod data;
 
-use crate::data::{Afu, get_afu, Stat, get_pg_school_stats, get_pg_stats, Photographer, get_photographers, get_schools, get_photographer_of};
+use crate::data::{Afu, get_afu, Stat, get_pg_school_stats, get_pg_stats, Photographer, get_photographers, get_schools, get_photographer_of, get_child_ids, SchoolIds};
 use std::time::{Duration, Instant};
 extern crate walkdir;
 extern crate image;
@@ -289,9 +289,17 @@ fn get_all_schools()->Vec<String>{
     }
     schools
 }
+#[tauri::command]
+fn get_child_ids_of(pg_id:i32, school: &str)->SchoolIds{
+    println!("req. ids for pg {} and school {}", pg_id, school);
+    if let Ok(ids) = get_child_ids(pg_id, &school){
+        return ids;
+    }
+    SchoolIds { elig_ids: Vec::new(), inelig_ids: Vec::new() }
+}
 fn main() {
   tauri::Builder::default()
-    .invoke_handler(tauri::generate_handler![is_path_exist, get_file_list, get_photo, get_ocr_info, get_rotated_image, get_rotated_image_tumb, rotate_and_copy, get_jpg_chil_ids, jpg_count, create_folder_paths, import_excel, get_afu_of,  get_pg_stat_byschool, get_pg_stats_all, get_all_photographers, get_all_schools, get_photographer_of])
+    .invoke_handler(tauri::generate_handler![is_path_exist, get_file_list, get_photo, get_ocr_info, get_rotated_image, get_rotated_image_tumb, rotate_and_copy, get_jpg_chil_ids, jpg_count, create_folder_paths, import_excel, get_afu_of,  get_pg_stat_byschool, get_pg_stats_all, get_all_photographers, get_all_schools, get_photographer_of, get_child_ids_of])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
 }

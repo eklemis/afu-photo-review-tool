@@ -2,7 +2,6 @@
 use calamine::{open_workbook,Reader, Xlsx};
 
 use rusqlite::{Connection, Result, params};
-use rusqlite::NO_PARAMS;
 use serde::ser::{Serialize, Serializer, SerializeStruct};
 
 //BASE functions
@@ -40,12 +39,12 @@ fn add_photographers(excel_path: &str, conn: &mut Connection)->Result<()>{
 
         println!("Prepare connection...");
 
-        let createPhotographersSql = "CREATE TABLE IF NOT EXISTS 'photographers (
+        let create_photographers_sql = "CREATE TABLE IF NOT EXISTS 'photographers (
             'id' INTEGER PRIMARY KEY,
             'name' TEXT NOT NULL
         );";
 
-        conn.execute(createPhotographersSql, NO_PARAMS);
+        conn.execute(create_photographers_sql, params![])?;
 
         let tx = conn.transaction()?;
         println!("Prepare Transaction...");
@@ -97,7 +96,7 @@ fn add_afu(excel_path: &str, conn: &mut Connection)->Result<()>{
         }
     }
     if afus.len() > 0{
-        let createAfuSql = "CREATE TABLE IF NOT EXISTS 'afu' (
+        let create_afu_sql = "CREATE TABLE IF NOT EXISTS 'afu' (
             'id' INTEGER PRIMARY KEY AUTOINCREMENT,
             'child_id' INTEGER UNIQUE NOT NULL,
             'child_name' TEXT NOT NULL,
@@ -112,7 +111,7 @@ fn add_afu(excel_path: &str, conn: &mut Connection)->Result<()>{
             'clarity_score' INTEGER DEFAULT 0,
             FOREIGN KEY ('pg_id') REFERENCES 'photographers'('id') ON DELETE SET NULL)";
 
-        conn.execute(createAfuSql, NO_PARAMS);
+        conn.execute(create_afu_sql, params![])?;
         let tx = conn.transaction()?;
         println!("Prepare AFU Transaction...");
 
@@ -298,8 +297,8 @@ pub fn get_photographer_of(school: &str)->Photographer{
 }
 
 pub struct SchoolIds {
-    elig_ids : Vec<i32>,
-    inelig_ids: Vec<i32>
+    pub elig_ids : Vec<i32>,
+    pub inelig_ids: Vec<i32>
 }
 impl Serialize for SchoolIds{
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -317,8 +316,8 @@ impl Serialize for SchoolIds{
 }
 pub fn get_child_ids(pg_id: i32, school: &str)->Result<SchoolIds>{
     let conn = Connection::open("data.db")?;
-    let elig_sql = "select child_id from afu where school = ?1 and pg_id = ?1 and last_status ='Eligible'";
-    let inelig_sql = "select child_id from afu where school = ?1 and pg_id = ?1 and last_status ='Ineligible'";
+    let elig_sql = "select child_id from afu where school = ?1 and pg_id = ?2 and last_status ='Eligible'";
+    let inelig_sql = "select child_id from afu where school = ?1 and pg_id = ?2 and last_status ='Ineligible'";
 
     let mut elig_ids:Vec<i32> = Vec::new();
     let mut stmt = conn.prepare(elig_sql)?;

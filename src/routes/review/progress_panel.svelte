@@ -2,7 +2,7 @@
 	//@ts-nocheck
 	import { onMount } from 'svelte';
 	import Chart from 'chart.js/auto';
-	import { get_pg_stat_byschool } from '$lib/rust_functions';
+	import { get_pg_stat_byschool, get_child_ids_of } from '$lib/rust_functions';
 	import { createEventDispatcher } from 'svelte';
 	const dispatch = createEventDispatcher();
 
@@ -26,6 +26,8 @@
 		num_inelig: 0
 	};
 
+	let incorect_ids = [];
+
 	let photo_not_collected_stat = {
 		num_elig: 0,
 		num_inelig: 0
@@ -40,7 +42,7 @@
 				borderColor: 'rgb(75, 192, 192)',
 				backgroundColor: 'rgba(75, 192, 192, 0.6)',
 				borderWidth: 1,
-				borderRadius: 2,
+				borderRadius: 1,
 				borderSkipped: false
 			},
 			{
@@ -49,7 +51,7 @@
 				borderColor: 'rgb(255, 205, 86)',
 				backgroundColor: 'rgba(255, 205, 86, 0.6)',
 				borderWidth: 1,
-				borderRadius: 2,
+				borderRadius: 1,
 				borderSkipped: false
 			}
 		]
@@ -62,21 +64,27 @@
 			school_stats.num_elig = res.num_elig;
 			school_stats.num_inelig = res.num_inelig;
 
-			photo_not_collected_stat = {
-				num_elig: school_stats.num_elig - collected_elig_ids.length,
-				num_inelig: school_stats.num_inelig - collected_inelig_ids.length
-			};
-			console.log('Photo not collected stat', photo_not_collected_stat);
-			//CHART SETUPS
-			data.datasets[0].data = [collected_elig_ids.length, collected_inelig_ids.length];
-			data.datasets[1].data = [
-				photo_not_collected_stat.num_elig,
-				photo_not_collected_stat.num_inelig
-			];
-			if (chart) {
-				chart.update();
-			}
-			dispatchRefreshed();
+			get_child_ids_of(photographer.id, school).then((ids) => {
+				const filtered_elig_ids = collected_elig_ids.filter((id) =>
+					ids.elig_ids.includes(Number(id))
+				);
+				incorect_ids = collected_elig_ids.filter((id) => !ids.elig_ids.includes(Number(id)));
+				photo_not_collected_stat = {
+					num_elig: school_stats.num_elig - filtered_elig_ids.length,
+					num_inelig: school_stats.num_inelig - collected_inelig_ids.length
+				};
+				console.log('Photo not collected stat', photo_not_collected_stat);
+				//CHART SETUPS
+				data.datasets[0].data = [collected_elig_ids.length, collected_inelig_ids.length];
+				data.datasets[1].data = [
+					photo_not_collected_stat.num_elig,
+					photo_not_collected_stat.num_inelig
+				];
+				if (chart) {
+					chart.update();
+				}
+				dispatchRefreshed();
+			});
 		});
 	}
 
@@ -150,5 +158,13 @@
 		<div>
 			<canvas id="myChart" />
 		</div>
+		<section class="mt-8">
+			<h3 class="text-gray-400 text-sm">Unknown or misplaced photo ids</h3>
+			<div class="flex flex-wrap gap-1">
+				{#each incorect_ids as child_id, idx ('chid' + idx)}
+					<span class="block text-[12px] text-slate-500 border p-1">{child_id}</span>
+				{/each}
+			</div>
+		</section>
 	</section>
 </section>

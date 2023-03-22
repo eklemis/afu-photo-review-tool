@@ -1,6 +1,11 @@
 <script>
 	//@ts-nocheck
-	import { get_pg_stats_all, get_all_child_ids } from '$lib/rust_functions';
+	import {
+		get_pg_stats_all,
+		get_all_child_ids,
+		get_child_ids_of,
+		get_afu_of
+	} from '$lib/rust_functions';
 	import { onDestroy, onMount } from 'svelte';
 	import Chart from 'chart.js/auto';
 	import { mainDestPath } from '../../lib/store';
@@ -32,14 +37,74 @@
 	//1 for option 'All' and keep increasing
 	let page_one_sub = 1;
 	//set selected school based on page_one_sub option
-	let selected_school = 'ALL';
-	const setPageOneSub = (new_num) => {
-		page_one_sub = new_num;
-		selected_school = pg_schools.filter((sch, idx) => idx === page_one_sub - 2)[0];
+	let selected_school = 'NOT SET';
+	//Child ids from pg_id in selected school
+	let page_one_ids = {
+		elig_ids: [],
+		inelig_ids: []
 	};
+	//contain afu of unknown or misplaced photo
+	let page_one_rows = {
+		elig_rows: [],
+		inelig_rows: []
+	};
+	const setSchool = async (new_school) => {
+		selected_school = new_school;
+		page_one_ids = await get_child_ids_of(pg_id, selected_school);
+		const collected_elig_ids = await get_all_child_ids(main_dest_path + selected_school);
+		//console.log('collected ids:', collected_elig_ids);
+		const colleted_inelig_ids = await get_all_child_ids(
+			main_dest_path + 'Ineligibles\\' + selected_school
+		);
+		const filtered_eligs = collected_elig_ids.filter(
+			(id) => !page_one_ids.elig_ids.includes(Number(id))
+		);
+		page_one_rows.elig_rows = [];
+		const fetchAfuEligs = () => {
+			return new Promise((res) => {
+				filtered_eligs.forEach((id, idx) => {
+					get_afu_of(id).then((afu) => {
+						let formated_afu = { ...afu };
+						if (afu.child_id === 0) {
+							formated_afu.child_id = id;
+						}
+						page_one_rows.elig_rows.push(formated_afu);
+						if (idx === filtered_eligs.length - 1) {
+							res();
+						}
+					});
+				});
+			});
+		};
+
+		await fetchAfuEligs();
+
+		console.log('page one elig incorrect:', page_one_rows);
+
+		const filter_ineligs = colleted_inelig_ids
+			.filter((id) => !page_one_ids.inelig_ids.includes(id))
+			.map(async (id) => {
+				let afu = await get_afu_of(id);
+				if (afu.child_id === 0) {
+					afu.child_id = id;
+				}
+				return afu;
+			});
+		page_one_rows.inelig_rows = filter_ineligs;
+		console.log('page_one_ids: ', page_one_ids);
+	};
+	const setPageOneSub = async (new_num) => {
+		page_one_sub = new_num;
+		let sch = pg_schools.filter((sch, idx) => idx === page_one_sub - 1)[0];
+		await setSchool(sch);
+	};
+
 	//1 for option 'All', 2, 'Eligible', 3 for 'Ineligible'
 	let page_two_sub = 1;
+	//set selected school based on page_one_sub option
+	let p2_selected_school = 'NOT SET';
 	let latest_status = 'All';
+
 	const setPageTwoSub = (new_num) => {
 		page_two_sub = new_num;
 		if (page_two_sub === 2) {
@@ -50,9 +115,11 @@
 			latest_status = 'All';
 		}
 	};
+
+	//General Things
 	const setSubsDefault = () => {
 		page_one_sub = 1;
-		selected_school = 'ALL';
+		setPageOneSub(1);
 		page_two_sub = 1;
 		latest_status = 'All';
 	};
@@ -76,10 +143,15 @@
 					const collectedEligs = [];
 					schls.forEach((sch, idx) => {
 						get_all_child_ids(main_dest_path + sch).then((child_ids) => {
-							collectedEligs.push(child_ids.length);
-							if (idx === schls.length - 1) {
-								res(collectedEligs);
-							}
+							//filter ids that not correspond to current sch
+							get_child_ids_of(pg_id, sch).then((ids) => {
+								console.log('ids: ', ids);
+								const filtered_eligs = child_ids.filter((id) => ids.elig_ids.includes(Number(id)));
+								collectedEligs.push(filtered_eligs.length);
+								if (idx === schls.length - 1) {
+									res(collectedEligs);
+								}
+							});
 						});
 					});
 				});
@@ -225,20 +297,12 @@
 		<div class="p-1 border border-t-0">
 			{#if page_num === 1}
 				<ul class="flex gap-[2px] mt-2 mb-2 flex-wrap">
-					<li class="w-54">
-						<button
-							on:click={() => setPageOneSub(1)}
-							class={`text-[12px] w-full border border-slate-200 p-1 ${
-								page_one_sub === 1 ? 'text-gray-600 bg-slate-300' : 'text-gray-600 border-gray-400'
-							}`}>All school</button
-						>
-					</li>
 					{#each pg_schools as pg_sch, idx ('bt-' + pg_sch)}
 						<li class="w-54">
 							<button
-								on:click={() => setPageOneSub(idx + 2)}
+								on:click={() => setPageOneSub(idx + 1)}
 								class={`text-[12px] w-full border border-slate-200 p-1 ${
-									page_one_sub === idx + 2
+									page_one_sub === idx + 1
 										? 'text-gray-600 bg-slate-300'
 										: 'text-gray-600 border-gray-400'
 								}`}>{pg_sch}</button
@@ -251,26 +315,42 @@
 					<thead>
 						<th
 							class="border border-slate-300 text-[12px] text-gray-500 font-normal bg-slate-100 p-1"
-							>Child id</th
+							>No.</th
 						>
 						<th
 							class="border border-slate-300 text-[12px] text-gray-500 font-normal bg-slate-100 p-1"
-							>#Shoot</th
+							>Child id</th
 						>
 						<th
 							class="border border-slate-300 text-[12px] text-gray-500 font-normal bg-slate-100 p-1"
 							>Correct Identity</th
 						>
 					</thead>
-					<tbody>
-						<tr>
-							<td class="border border-slate-300 text-gray-700 text-[12px] p-1">S</td>
-							<td class="border border-slate-300 text-gray-700 text-[12px] p-1">C</td>
-							<td class="border border-slate-300 text-gray-700 text-[12px] p-1">S</td>
-						</tr>
+					<tbody class="max-h-96 overflow-scroll">
+						{#if page_one_rows.elig_rows.length + page_one_rows.inelig_rows > 0}
+							{#each page_one_rows.elig_rows as afu, idx ('page_one_row-' + idx)}
+								<tr>
+									<td class="border border-slate-300 text-gray-700 text-[12px] p-1">{idx + 1}</td>
+									<td class="border border-slate-300 text-gray-700 text-[12px] p-1"
+										>{afu.child_id}</td
+									>
+
+									<td class="border border-slate-300 text-gray-700 text-[12px] p-1"
+										>{afu.child_name +
+											', ' +
+											afu.school +
+											', grade: ' +
+											afu.last_grade +
+											', ' +
+											afu.last_status}</td
+									>
+								</tr>
+							{/each}
+						{:else}
+							<p class="flex items-center justify-center w-full text-gray-500">No Records</p>
+						{/if}
 					</tbody>
 				</table>
-				<p>{selected_school}</p>
 			{:else}
 				<ul class="flex gap-[2px] mt-2 mb-2 flex-wrap">
 					<li class="min-w-[80px]">

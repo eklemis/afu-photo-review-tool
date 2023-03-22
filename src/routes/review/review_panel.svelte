@@ -399,7 +399,7 @@
 			<h3 class="text-sm font-bold text-[#423C3C]">Identity</h3>
 			<div class="flex gap-x-2 items-baseline justify-between">
 				<p class="flex w-28 text-sm text-gray-400 text-left">Child id</p>
-				<span class="focus:outline-none w-16 bg-white border-b text-[#423C3C] text-sm"
+				<span class="focus:outline-none w-16 bg-white border-b text-[#423C3C] text-sm text-right"
 					>{curr_afu.child_id}</span
 				>
 			</div>
