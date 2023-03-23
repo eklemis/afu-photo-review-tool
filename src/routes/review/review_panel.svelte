@@ -391,6 +391,8 @@
 			});
 		});
 	};
+
+	let side_opt = 1;
 </script>
 
 <div class="flex flex-col h-[100%] min-h-full content-center justify-center border-dashed">
@@ -533,11 +535,11 @@
 					</div>
 					<div>
 						<button
-							class="border border-[#405CF5] rounded text-sm px-2 w-12 h-7 bg-white text-[#405CF5]"
+							class="border border-[#405CF5] hover:bg-blue-100 hover:border-blue-500 transition-colors active:bg-blue-300 rounded text-sm px-2 w-12 h-7 bg-white text-[#405CF5]"
 							on:click={go_prev}>Prev</button
 						>
 						<button
-							class="border border-[#405CF5] rounded text-sm px-2 w-12 h-7 bg-white text-[#405CF5]"
+							class="border border-[#405CF5] hover:bg-blue-100 hover:border-blue-500 transition-colors active:bg-blue-300 rounded text-sm px-2 w-12 h-7 bg-white text-[#405CF5]"
 							on:click={go_next}
 							disabled={!is_child_id && !fresh_start}>Next</button
 						>
@@ -576,19 +578,37 @@
 			</div>
 		</div>
 		<div class="h-full bg-[#FAFAFA] w-[500px] border ml-1">
-			<div>
-				<button class="text-xs">Photos in folder</button>
-				<button class="text-xs">Progress</button>
+			<div class="flex gap-x-0">
+				<button
+					class={`text-xs w-1/2 py-[2px] border ${side_opt === 1 ? ' bg-slate-300' : ''}`}
+					on:click={() => (side_opt = 1)}>Photos in folder</button
+				>
+				<button
+					class={`text-xs w-1/2 py-[2px] border ${side_opt === 2 ? ' bg-slate-300' : ''}`}
+					on:click={() => (side_opt = 2)}>Progress</button
+				>
 			</div>
 			<div>
-				<ProgressPanel
-					photographer={curr_pg}
-					school={curr_afu.school === '' ? selected_school : curr_afu.school}
-					collected_elig_ids={ids_with_photos}
-					collected_inelig_ids={ids_with_photos_inel}
-					should_refresh={refresh_chart}
-					on:refreshed={turnOffRefresh}
-				/>
+				{#if side_opt === 1}
+					<div class="overflow-y-scroll h-full max-h-[650px] p-1">
+						<ul class="h-full">
+							{#each image_list as img_path}
+								<li class="w-full border flex justify-center text-[12px] text-zinc-500">
+									{img_path.split('\\')[img_path.split('\\').length - 1]}
+								</li>
+							{/each}
+						</ul>
+					</div>
+				{:else if side_opt === 2}
+					<ProgressPanel
+						photographer={curr_pg}
+						school={curr_afu.school === '' ? selected_school : curr_afu.school}
+						collected_elig_ids={ids_with_photos}
+						collected_inelig_ids={ids_with_photos_inel}
+						should_refresh={refresh_chart}
+						on:refreshed={turnOffRefresh}
+					/>
+				{/if}
 			</div>
 		</div>
 	</div>

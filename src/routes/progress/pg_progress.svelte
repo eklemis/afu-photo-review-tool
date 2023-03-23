@@ -50,6 +50,10 @@
 	};
 	const setSchool = async (new_school) => {
 		selected_school = new_school;
+		page_one_rows = {
+			elig_rows: [],
+			inelig_rows: []
+		};
 		page_one_ids = await get_child_ids_of(pg_id, selected_school);
 		const collected_elig_ids = await get_all_child_ids(main_dest_path + selected_school);
 		//console.log('collected ids:', collected_elig_ids);
@@ -59,27 +63,26 @@
 		const filtered_eligs = collected_elig_ids.filter(
 			(id) => !page_one_ids.elig_ids.includes(Number(id))
 		);
-		page_one_rows.elig_rows = [];
-		const fetchAfuEligs = () => {
+
+		const fetchAfu = (ids) => {
 			return new Promise((res) => {
-				filtered_eligs.forEach((id, idx) => {
+				const all_afus = [];
+				ids.forEach((id, idx) => {
 					get_afu_of(id).then((afu) => {
 						let formated_afu = { ...afu };
 						if (afu.child_id === 0) {
 							formated_afu.child_id = id;
 						}
-						page_one_rows.elig_rows.push(formated_afu);
-						if (idx === filtered_eligs.length - 1) {
-							res();
+						all_afus.push(formated_afu);
+						if (idx === ids.length - 1) {
+							res(all_afus);
 						}
 					});
 				});
 			});
 		};
 
-		await fetchAfuEligs();
-
-		console.log('page one elig incorrect:', page_one_rows);
+		page_one_rows.elig_rows = await fetchAfu(filtered_eligs);
 
 		const filter_ineligs = colleted_inelig_ids
 			.filter((id) => !page_one_ids.inelig_ids.includes(id))
@@ -90,7 +93,7 @@
 				}
 				return afu;
 			});
-		page_one_rows.inelig_rows = filter_ineligs;
+		page_one_rows.inelig_rows = await fetchAfu(filter_ineligs);
 		console.log('page_one_ids: ', page_one_ids);
 	};
 	const setPageOneSub = async (new_num) => {
@@ -104,24 +107,70 @@
 	//set selected school based on page_one_sub option
 	let p2_selected_school = 'NOT SET';
 	let latest_status = 'All';
-
-	const setPageTwoSub = (new_num) => {
-		page_two_sub = new_num;
-		if (page_two_sub === 2) {
-			latest_status = 'Eligible';
-		} else if (page_two_sub === 3) {
-			latest_status = 'Ineligible';
-		} else {
-			latest_status = 'All';
-		}
+	let not_collected_afu = {
+		eligs: [],
+		ineligs: []
 	};
 
+	const setPageTwoSub = async (new_num) => {
+		page_two_sub = new_num;
+		let sch = pg_schools.filter((sch, idx) => idx === page_two_sub - 1)[0];
+		await setSchoolP2(sch);
+	};
+	const setSchoolP2 = async (new_school) => {
+		not_collected_afu = {
+			eligs: [],
+			ineligs: []
+		};
+		p2_selected_school = new_school;
+		//get all child ids of current photographer for current school
+		const all_child_ids = await get_child_ids_of(pg_id, p2_selected_school);
+		const collected_elig_ids = await get_all_child_ids(main_dest_path + p2_selected_school);
+		const collected_inelig_ids = await get_all_child_ids(
+			main_dest_path + 'Ineligiles\\' + p2_selected_school
+		);
+		//filter the collected ids to exclude incorrect ids
+		const filtered_elig_ids = collected_elig_ids
+			.filter((id) => all_child_ids.elig_ids.includes(Number(id)))
+			.map((id) => Number(id));
+		console.log('Filtered collected ids:', filtered_elig_ids);
+		const filtered_inelig_ids = collected_inelig_ids
+			.filter((id) => all_child_ids.inelig_ids.includes(Number(id)))
+			.map((id) => Number(id));
+		//separate the not collecteds
+		const nc_elig_ids = all_child_ids.elig_ids.filter(
+			(id) => !filtered_elig_ids.includes(Number(id))
+		);
+		const nc_inelig_ids = all_child_ids.inelig_ids.filter(
+			(id) => !filtered_inelig_ids.includes(Number(id))
+		);
+
+		const fetchAfu = (ids) => {
+			return new Promise((res) => {
+				const all_afus = [];
+				ids.forEach(async (id, idx) => {
+					get_afu_of(id).then((afu) => {
+						let formated_afu = { ...afu };
+						if (afu.child_id === 0) {
+							formated_afu.child_id = id;
+						}
+						all_afus.push(formated_afu);
+						if (idx === ids.length - 1) {
+							res(all_afus);
+						}
+					});
+				});
+			});
+		};
+		not_collected_afu.eligs = await fetchAfu(nc_elig_ids);
+		not_collected_afu.ineligs = await fetchAfu(nc_inelig_ids);
+	};
 	//General Things
 	const setSubsDefault = () => {
 		page_one_sub = 1;
 		setPageOneSub(1);
 		page_two_sub = 1;
-		latest_status = 'All';
+		setPageTwoSub(page_two_sub);
 	};
 
 	$: if (refresh_now) {
@@ -327,7 +376,7 @@
 						>
 					</thead>
 					<tbody class="max-h-96 overflow-scroll">
-						{#if page_one_rows.elig_rows.length + page_one_rows.inelig_rows > 0}
+						{#if page_one_rows.elig_rows.length + page_one_rows.inelig_rows.length > 0}
 							{#each page_one_rows.elig_rows as afu, idx ('page_one_row-' + idx)}
 								<tr>
 									<td class="border border-slate-300 text-gray-700 text-[12px] p-1">{idx + 1}</td>
@@ -353,33 +402,26 @@
 				</table>
 			{:else}
 				<ul class="flex gap-[2px] mt-2 mb-2 flex-wrap">
-					<li class="min-w-[80px]">
-						<button
-							on:click={() => setPageTwoSub(1)}
-							class={`text-[12px] w-full border border-slate-200 p-1 ${
-								page_two_sub === 1 ? 'text-gray-600 bg-slate-300' : 'text-gray-600 border-gray-400'
-							}`}>All</button
-						>
-					</li>
-					<li class="min-w-[80px]">
-						<button
-							on:click={() => setPageTwoSub(2)}
-							class={`text-[12px] w-full border border-slate-200 p-1 ${
-								page_two_sub === 2 ? 'text-gray-600 bg-slate-300' : 'text-gray-600 border-gray-400'
-							}`}>Eligibles</button
-						>
-					</li>
-					<li class="min-w-[80px]">
-						<button
-							on:click={() => setPageTwoSub(3)}
-							class={`text-[12px] w-full border border-slate-200 p-1 ${
-								page_two_sub === 3 ? 'text-gray-600 bg-slate-300' : 'text-gray-600 border-gray-400'
-							}`}>Ineligibles</button
-						>
-					</li>
+					{#each pg_schools as pg_sch, idx ('bt2-' + pg_sch)}
+						<li class="w-54">
+							<button
+								on:click={() => setPageTwoSub(idx + 1)}
+								class={`text-[12px] w-full border border-slate-200 p-1 ${
+									page_two_sub === idx + 1
+										? 'text-gray-600 bg-slate-300'
+										: 'text-gray-600 border-gray-400'
+								}`}>{pg_sch}</button
+							>
+						</li>
+					{/each}
 				</ul>
+
 				<table class="border-collapse border border-slate-400">
 					<thead>
+						<th
+							class="border border-slate-300 text-[12px] text-gray-500 font-normal bg-slate-100 p-1"
+							>No.</th
+						>
 						<th
 							class="border border-slate-300 text-[12px] text-gray-500 font-normal bg-slate-100 p-1"
 							>Child id</th
@@ -398,15 +440,46 @@
 						>
 					</thead>
 					<tbody>
-						<tr>
-							<td class="border border-slate-300 text-gray-700 text-[12px] p-1">S</td>
-							<td class="border border-slate-300 text-gray-700 text-[12px] p-1">C</td>
-							<td class="border border-slate-300 text-gray-700 text-[12px] p-1">S</td>
-							<td class="border border-slate-300 text-gray-700 text-[12px] p-1">Sumba</td>
-						</tr>
+						{#if not_collected_afu.eligs.length + not_collected_afu.ineligs.length > 0}
+							{#each not_collected_afu.eligs as afu, idx ('nc-elig' + idx)}
+								<tr>
+									<td class="border border-slate-300 text-gray-700 text-[12px] p-1">{idx + 1}</td>
+									<td class="border border-slate-300 text-gray-700 text-[12px] p-1"
+										>{afu.child_id}</td
+									>
+									<td class="border border-slate-300 text-gray-700 text-[12px] p-1"
+										>{afu.child_name}</td
+									>
+									<td class="border border-slate-300 text-gray-700 text-[12px] p-1">{afu.school}</td
+									>
+									<td class="border border-slate-300 text-gray-700 text-[12px] p-1"
+										>{afu.last_status}</td
+									>
+								</tr>
+							{/each}
+							{#each not_collected_afu.ineligs as afu, idx ('nc-inelig' + idx)}
+								<tr>
+									<td class="border border-slate-300 text-gray-700 text-[12px] p-1"
+										>{idx + not_collected_afu.eligs.length + 1}</td
+									>
+									<td class="border border-slate-300 text-gray-700 text-[12px] p-1"
+										>{afu.child_id}</td
+									>
+									<td class="border border-slate-300 text-gray-700 text-[12px] p-1"
+										>{afu.child_name}</td
+									>
+									<td class="border border-slate-300 text-gray-700 text-[12px] p-1">{afu.school}</td
+									>
+									<td class="border border-slate-300 text-gray-700 text-[12px] p-1"
+										>{afu.last_status}</td
+									>
+								</tr>
+							{/each}
+						{:else}
+							<p class="flex items-center justify-center w-full text-gray-500">No Records</p>
+						{/if}
 					</tbody>
 				</table>
-				<p>{latest_status}</p>
 			{/if}
 		</div>
 	</div>

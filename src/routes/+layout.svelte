@@ -10,7 +10,7 @@
 			<li><a href="/settings">Settings</a></li>
 		</ul>
 		<a
-			class="flex self-start items-center content-center justify-center mt-1 w-28 h-10 bg-red-500 text-white rounded"
+			class="flex self-start items-center content-center justify-center mt-1 w-28 h-10 bg-red-500 hover:bg-red-400 active:bg-red-600 text-white rounded"
 			href="/progress">See progress</a
 		>
 	</nav>

@@ -124,42 +124,37 @@
 	});
 </script>
 
-<section class="p-2">
-	<h3>Photographer progress</h3>
+<section class="p-2 flex flex-col gap-y-2">
 	<div class="flex justify-between">
-		<p class="text-sm text-gray-600">Photographer</p>
-		<p class="text-sm font-bold">{photographer.name}</p>
+		<p class="text-[12px] text-gray-500">Photographer</p>
+		<p class="text-[12px] text-gray-600 font-bold">{photographer.name}</p>
 	</div>
 	<div class="flex justify-between">
-		<p class="text-sm text-gray-600">School</p>
-		<p class="text-sm font-bold">{school}</p>
+		<p class="text-[12px] text-gray-500">School</p>
+		<p class="text-[12px] text-gray-600 font-bold">{school}</p>
 	</div>
 	<div class="flex justify-between">
-		<p class="text-sm text-gray-600">All Eligible</p>
-		<p class="text-sm">{school_stats.num_elig}</p>
+		<p class="text-[12px] text-gray-500">All Eligible</p>
+		<p class="text-[12px] text-gray-600">{school_stats.num_elig}</p>
 	</div>
 	<div class="flex justify-between">
-		<p class="text-sm text-gray-600">All Inligible</p>
-		<p class="text-sm">{school_stats.num_inelig}</p>
+		<p class="text-[12px] text-gray-500">All Inligible</p>
+		<p class="text-[12px] text-gray-600">{school_stats.num_inelig}</p>
 	</div>
 	<div class="flex justify-between">
-		<p class="text-sm text-gray-600">Collected Eligible</p>
-		<p class="text-sm font-bold">{collected_elig_ids.length}</p>
+		<p class="text-[12px] text-gray-500">Collected Eligible</p>
+		<p class="text-[12px] text-gray-600 font-bold">{collected_elig_ids.length}</p>
 	</div>
 	<div class="flex justify-between">
-		<p class="text-sm text-gray-600">Collected Ineligle</p>
-		<p class="text-sm font-bold">{collected_inelig_ids.length}</p>
-	</div>
-	<div class="flex justify-between">
-		<p class="text-sm text-gray-600">NOT Collected Eligible</p>
-		<p class="text-sm font-bold">{photo_not_collected_stat.num_elig}</p>
+		<p class="text-[12px] text-gray-500">Collected Ineligle</p>
+		<p class="text-[12px] text-gray-600 font-bold">{collected_inelig_ids.length}</p>
 	</div>
 	<section class="mt-16">
 		<div>
 			<canvas id="myChart" />
 		</div>
-		<section class="mt-8">
-			<h3 class="text-gray-400 text-sm">Unknown or misplaced photo ids</h3>
+		<section class="mt-8 flex justify-center">
+			<h3 class="text-zinc-500 font-bold text-[12px]">Unknown or misplaced photo ids</h3>
 			<div class="flex flex-wrap gap-1">
 				{#each incorect_ids as child_id, idx ('chid' + idx)}
 					<span class="block text-[12px] text-slate-500 border p-1">{child_id}</span>
