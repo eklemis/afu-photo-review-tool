@@ -50,6 +50,7 @@
 	onMount(async () => {
 		const imageLinks = document.querySelectorAll('#images > a');
 		const idtLinks = document.querySelectorAll('#idt-image');
+		const prevLinks = document.querySelectorAll('#prev-image');
 
 		// add click listener to open BiggerPicture
 		for (let link of imageLinks) {
@@ -58,6 +59,15 @@
 		// add click listener to open BiggerPicture
 		for (let link of idtLinks) {
 			link.addEventListener('click', openGalleryDt);
+		}
+		// add click listener to open BiggerPicture
+		for (let link of prevLinks) {
+			link.addEventListener('click', (e) => {
+				bp.open({
+					items: prevLinks,
+					el: e.currentTarget
+				});
+			});
 		}
 		// grab image links
 		function openGallery(e) {
@@ -313,18 +323,21 @@
 	const acceptImage = () => {
 		//let base_name = img_path.split('\\').pop();
 		selected_school = curr_afu.school;
+		let base_path_only = main_dest_path + selected_school;
 		let dest_base_name = curr_identity.child_id + '_' + curr_identity.roll_shot + '.JPG';
-		let dest_path = main_dest_path + selected_school + '\\' + dest_base_name;
+		let dest_path = base_path_only + '\\' + dest_base_name;
 		console.log('dest_path:', dest_path);
-		get_all_child_ids(main_dest_path + selected_school).then((ids) => (ids_with_photos = ids));
-		setTimeout(() => {
-			file_rotated_and_saved_show = true;
-			file_rotated_and_saved_success = rotate_and_copy(curr_rot_deg, img_path, dest_path);
+		create_nonexist_folders(base_path_only).then((res) => {
+			get_all_child_ids(main_dest_path + selected_school).then((ids) => (ids_with_photos = ids));
 			setTimeout(() => {
-				file_rotated_and_saved_show = false;
-				refreshCollectedList();
-			}, 3500);
-		}, 0);
+				file_rotated_and_saved_show = true;
+				file_rotated_and_saved_success = rotate_and_copy(curr_rot_deg, img_path, dest_path);
+				setTimeout(() => {
+					file_rotated_and_saved_show = false;
+					refreshCollectedList();
+				}, 3500);
+			}, 0);
+		});
 	};
 	const moveWithIdentity = async () => {};
 	const rejectImage = async () => {
@@ -401,17 +414,17 @@
 			<h3 class="text-sm font-bold text-[#423C3C]">Identity</h3>
 			<div class="flex gap-x-2 items-baseline justify-between">
 				<p class="flex w-28 text-sm text-gray-400 text-left">Child id</p>
-				<span class="focus:outline-none w-16 bg-white border-b text-[#423C3C] text-sm text-right"
+				<span
+					class="focus:outline-none w-16 bg-white border-b border-b-gray-100 text-[#423C3C] font-bold text-sm text-right"
 					>{curr_afu.child_id}</span
 				>
 			</div>
 			<div class="flex gap-x-2 items-baseline justify-between">
-				<label for="roll_shot" class="flex w-28 text-sm text-gray-400 text-left">#Roll number</label
-				>
+				<label for="roll_shot" class="flex w-28 text-sm text-gray-400 text-left">Roll number</label>
 				<input
 					type="text"
 					id="roll_shot"
-					class="focus:outline-none w-16 bg-white border-b text-[#423C3C] text-sm text-right"
+					class="focus:outline-none w-16 bg-white border-b border-b-gray-100 text-[#423C3C] font-bold text-sm text-right"
 					bind:value={curr_identity.roll_shot}
 					disabled
 				/>
@@ -445,6 +458,17 @@
 				class="mt-16 h-9 bg-[#FAFAFA] border border-[#405CF5] rounded text-[#405CF5] text-center font-semibold text-sm flex items-center justify-center"
 				>See identity photo</a
 			>
+			<a
+				id="prev-image"
+				href={'http://192.168.1.3:3000/api/photo/latest/' + curr_afu.child_id}
+				data-img={'http://192.168.1.3:3000/api/photo/latest/' + curr_afu.child_id}
+				data-thumb={'http://192.168.1.3:3000/api/photo/latest/' + curr_afu.child_id}
+				data-alt="will open previous year photo"
+				data-height={800}
+				data-width={600}
+				class="mt-1 h-9 bg-[#FAFAFA] text-[#405CF5] text-center underline font-semibold text-sm flex items-center justify-center"
+				>Previous year photo</a
+			>
 			<div class="flex gap-x-3 p-1 mt-12">
 				<div class="flex items-center self-end">
 					{#if ids_with_photos.includes(curr_identity.child_id)}
@@ -466,19 +490,19 @@
 			<div class="flex items-center justify-end px-2 w-full bg-base-blue">
 				<div class="flex items-center gap-x-1 py-1">
 					<button
-						class={`order h-7 w-14 text-xs font-bold rounded-sm px-4 py-2 flex items-center justify-center ${
+						class={` hover:bg-blue-100 transition-colors order h-7 w-14 text-xs font-bold rounded-sm px-4 py-2 flex items-center justify-center ${
 							curr_rot_deg === 90 ? ' text-white bg-blue-400 ' : 'bg-[#F8F9FA] text-font-blue'
 						}`}
 						on:click={() => set_curr_rot_deg(90)}>90°</button
 					>
 					<button
-						class={`order h-7 w-14 text-xs font-bold rounded-sm px-4 py-2 flex items-center justify-center ${
+						class={` hover:bg-blue-100 transition-colors order h-7 w-14 text-xs font-bold rounded-sm px-4 py-2 flex items-center justify-center ${
 							curr_rot_deg === 180 ? ' text-white bg-blue-400 ' : 'bg-[#F8F9FA] text-font-blue'
 						}`}
 						on:click={() => set_curr_rot_deg(180)}>180°</button
 					>
 					<button
-						class={`order h-7 w-14 text-xs font-bold rounded-sm px-4 py-2 flex items-center justify-center ${
+						class={` hover:bg-blue-100 transition-colors order h-7 w-14 text-xs font-bold rounded-sm px-4 py-2 flex items-center justify-center ${
 							curr_rot_deg === 270 ? ' text-white bg-blue-400 ' : 'bg-[#F8F9FA] text-font-blue'
 						}`}
 						on:click={() => set_curr_rot_deg(270)}>270°</button
@@ -490,8 +514,8 @@
 			>
 				<div class="flex w-full items-center justify-center">
 					<div class="flex items-center text-sm gap-x-1">
-						<span class="font-bold text-[#423C3C]">{curr_index + 1}</span>
-						<span class="text-[#423C3C]">of {image_list.length}</span>
+						<span class="font-bold text-sm text-gray-500">{curr_index + 1}</span>
+						<span class="text-gray-500 text-sm">of {image_list.length}</span>
 					</div>
 				</div>
 				<div id="images" class="flex items-center justify-center min-h-[520px] border">
@@ -535,11 +559,11 @@
 					</div>
 					<div>
 						<button
-							class="border border-[#405CF5] hover:bg-blue-100 hover:border-blue-500 transition-colors active:bg-blue-300 rounded text-sm px-2 w-12 h-7 bg-white text-[#405CF5]"
+							class="border border-gray-300 text-gray-500 hover:bg-blue-100 hover:border-blue-400 transition-colors active:bg-blue-300 rounded text-sm px-2 w-12 h-7 bg-white hover:text-blue-400"
 							on:click={go_prev}>Prev</button
 						>
 						<button
-							class="border border-[#405CF5] hover:bg-blue-100 hover:border-blue-500 transition-colors active:bg-blue-300 rounded text-sm px-2 w-12 h-7 bg-white text-[#405CF5]"
+							class="border border-gray-300 text-gray-500 hover:bg-blue-100 hover:border-blue-400 transition-colors active:bg-blue-300 rounded text-sm px-2 w-12 h-7 bg-white hover:text-blue-400"
 							on:click={go_next}
 							disabled={!is_child_id && !fresh_start}>Next</button
 						>

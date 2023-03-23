@@ -127,11 +127,11 @@
 <section class="p-2 flex flex-col gap-y-2">
 	<div class="flex justify-between">
 		<p class="text-[12px] text-gray-500">Photographer</p>
-		<p class="text-[12px] text-gray-600 font-bold">{photographer.name}</p>
+		<p class="text-[12px] text-gray-600">{photographer.name}</p>
 	</div>
 	<div class="flex justify-between">
 		<p class="text-[12px] text-gray-500">School</p>
-		<p class="text-[12px] text-gray-600 font-bold">{school}</p>
+		<p class="text-[12px] text-gray-600">{school}</p>
 	</div>
 	<div class="flex justify-between">
 		<p class="text-[12px] text-gray-500">All Eligible</p>
@@ -143,11 +143,11 @@
 	</div>
 	<div class="flex justify-between">
 		<p class="text-[12px] text-gray-500">Collected Eligible</p>
-		<p class="text-[12px] text-gray-600 font-bold">{collected_elig_ids.length}</p>
+		<p class="text-[12px] text-gray-600">{collected_elig_ids.length}</p>
 	</div>
 	<div class="flex justify-between">
 		<p class="text-[12px] text-gray-500">Collected Ineligle</p>
-		<p class="text-[12px] text-gray-600 font-bold">{collected_inelig_ids.length}</p>
+		<p class="text-[12px] text-gray-600">{collected_inelig_ids.length}</p>
 	</div>
 	<section class="mt-16">
 		<div>

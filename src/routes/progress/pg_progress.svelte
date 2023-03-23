@@ -436,7 +436,11 @@
 						>
 						<th
 							class="border border-slate-300 text-[12px] text-gray-500 font-normal bg-slate-100 p-1"
-							>Latest Status</th
+							>Last grade</th
+						>
+						<th
+							class="border border-slate-300 text-[12px] text-gray-500 font-normal bg-slate-100 p-1"
+							>Last Status</th
 						>
 					</thead>
 					<tbody>
@@ -451,6 +455,9 @@
 										>{afu.child_name}</td
 									>
 									<td class="border border-slate-300 text-gray-700 text-[12px] p-1">{afu.school}</td
+									>
+									<td class="border border-slate-300 text-gray-700 text-[12px] p-1"
+										>{afu.last_grade}</td
 									>
 									<td class="border border-slate-300 text-gray-700 text-[12px] p-1"
 										>{afu.last_status}</td
@@ -469,6 +476,9 @@
 										>{afu.child_name}</td
 									>
 									<td class="border border-slate-300 text-gray-700 text-[12px] p-1">{afu.school}</td
+									>
+									<td class="border border-slate-300 text-gray-700 text-[12px] p-1"
+										>{afu.last_grade}</td
 									>
 									<td class="border border-slate-300 text-gray-700 text-[12px] p-1"
 										>{afu.last_status}</td
