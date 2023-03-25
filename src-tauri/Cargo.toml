@@ -25,9 +25,11 @@ fast_image_resize = "2.6.0"
 #prisma-client-rust = { git = "https://github.com/Brendonovich/prisma-client-rust", tag = "0.6.5", default-features = false, features = ["sqlite"] }
 tokio = "1.26.0"
 calamine = "0.19.1"
+glob = "0.3.0"
 [dependencies.rusqlite]
 version = "0.28.0"
 features = ["bundled"]
+
 #diesel = { version = "2.0.0", features = ["postgres"] }
 #dotenvy = "0.15"
 #prisma = { path = "node_modules/.prisma/client" }

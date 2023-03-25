@@ -163,7 +163,13 @@
 			});
 		};
 		not_collected_afu.eligs = await fetchAfu(nc_elig_ids);
+		not_collected_afu.eligs = not_collected_afu.eligs.sort((a, b) => {
+			return a.last_grade - b.last_grade;
+		});
 		not_collected_afu.ineligs = await fetchAfu(nc_inelig_ids);
+		not_collected_afu.ineligs = not_collected_afu.ineligs.sort((a, b) => {
+			return a.last_grade - b.last_grade;
+		});
 	};
 	//General Things
 	const setSubsDefault = () => {

@@ -10,7 +10,8 @@
 		create_nonexist_folders,
 		get_afu_of,
 		get_all_photographers,
-		get_photographer_of
+		get_photographer_of,
+		getPrevYearPhoto
 	} from '$lib/rust_functions';
 	import successIcon from '$lib/images/success.svg';
 	import failedIcon from '$lib/images/error.svg';
@@ -47,6 +48,9 @@
 	let bp = BiggerPicture({
 		target: document.body
 	});
+	let bp2 = BiggerPicture({
+		target: document.body
+	});
 	onMount(async () => {
 		const imageLinks = document.querySelectorAll('#images > a');
 		const idtLinks = document.querySelectorAll('#idt-image');
@@ -62,12 +66,15 @@
 		}
 		// add click listener to open BiggerPicture
 		for (let link of prevLinks) {
-			link.addEventListener('click', (e) => {
-				bp.open({
-					items: prevLinks,
-					el: e.currentTarget
-				});
+			link.addEventListener('click', openPrevImage);
+		}
+		// grab prev image link
+		function openPrevImage(e) {
+			bp2.open({
+				items: prevLinks,
+				el: e.currentTarget
 			});
+			//setTimeout(() => bp.close(), 5000);
 		}
 		// grab image links
 		function openGallery(e) {
@@ -145,6 +152,7 @@
 	let high_res_rotated_im = { src: '', path: '', deg: 0 };
 	let img_source = '';
 	let img_path = '';
+	let prev_year_src = '';
 	let ratio_base = 300;
 	let ratio_three = ratio_base * 3;
 	let ratio_four = ratio_base * 4;
@@ -460,9 +468,9 @@
 			>
 			<a
 				id="prev-image"
-				href={'http://192.168.1.3:3000/api/photo/latest/' + curr_afu.child_id}
-				data-img={'http://192.168.1.3:3000/api/photo/latest/' + curr_afu.child_id}
-				data-thumb={'http://192.168.1.3:3000/api/photo/latest/' + curr_afu.child_id}
+				href={prev_year_src}
+				data-img={prev_year_src}
+				data-thumb={prev_year_src}
 				data-alt="will open previous year photo"
 				data-height={800}
 				data-width={600}
@@ -552,6 +560,7 @@
 							on:keyup={async () => {
 								if (is_child_id) {
 									curr_afu = await get_afu_of(curr_identity.child_id);
+									prev_year_src = await getPrevYearPhoto(curr_identity.child_id.toString());
 								}
 							}}
 							disabled={!contain_identity}

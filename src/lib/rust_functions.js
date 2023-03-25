@@ -5,6 +5,10 @@ export const getPhoto = async (path) => {
 	return await invoke('get_photo', { path: path });
 };
 
+export const getPrevYearPhoto = async (child_id) => {
+	return await invoke('get_prev_year_photo', { id: child_id });
+};
+
 export const get_higher_rotated_image = async (src_path, deg) => {
 	//console.log('get higher rotated photo executed!');
 	return await invoke('get_rotated_image', { srcPath: src_path, deg: deg });

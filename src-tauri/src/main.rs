@@ -12,7 +12,6 @@ extern crate image;
 extern crate base64;
 use image::{DynamicImage, ImageOutputFormat};
 
-use std::path::Path;
 use walkdir::WalkDir;
 
 use image::io::Reader as ImageReader;
@@ -20,16 +19,12 @@ use image::imageops::FilterType;
 use std::io::Cursor;
 use base64::{Engine as _, engine::general_purpose};
 use std::fs;
+use std::fs::File;
+use std::io::prelude::*;
+use std::path::{Path, PathBuf};
 
 
 
-fn image_to_base64(img:DynamicImage)->String{
-    let mut image_data: Vec<u8> = Vec::new();
-    img.write_to(&mut Cursor::new(&mut image_data), ImageOutputFormat::Png)
-        .unwrap();
-    let base64 = general_purpose::STANDARD.encode(image_data);
-    base64
-}
 
 fn resized_width_height(old_width: u32, old_height: u32, ratio:(u32, u32))->(u32, u32){
     let nwidth: u32;
@@ -181,6 +176,14 @@ fn get_file_list(folder_path: &str) -> Vec<String>{
     v
 }
 
+fn image_to_base64(img:DynamicImage)->String{
+    let mut image_data: Vec<u8> = Vec::new();
+    img.write_to(&mut Cursor::new(&mut image_data), ImageOutputFormat::Png)
+        .unwrap();
+    let base64 = general_purpose::STANDARD.encode(image_data);
+    base64
+}
+
 #[tauri::command]
 fn get_photo(path:&str)->String{
     println!("Receive path:{}",path);
@@ -204,6 +207,32 @@ fn get_photo(path:&str)->String{
 
     println!("Time elapsed in get_photo function() is: {:?}ms", duration.as_millis());
     format!("data:image/png;base64,{}", base64)
+}
+#[tauri::command]
+fn get_prev_year_photo(id: &str) -> String {
+    let photo_dir_path = Path::new("G:/DataInput/AFU/Photo/OldPhoto");
+    let file_name_prefix = format!("{}_*.jpg", id);
+    let file_path = photo_dir_path.join(file_name_prefix);
+    let matching_file_path = match glob::glob(&file_path.to_string_lossy()) {
+        Ok(paths) => paths.filter_map(Result::ok).next(),
+        Err(_) => None,
+    };
+    let file_path = matching_file_path.unwrap_or_else(|| Path::new("image_not_available.jpg").to_path_buf());
+    let img = ImageReader::open(file_path)
+        .unwrap()
+        .decode()
+        .unwrap();
+    let base64 = image_to_base64(img);
+    format!("data:image/png;base64,{}", base64)
+    // let mut file = match File::open(file_path) {
+    //     Ok(file) => file,
+    //     Err(_) => return String::new(),
+    // };
+    // let mut contents = Vec::new();
+    // if let Err(_) = file.read_to_end(&mut contents) {
+    //     return String::new();
+    // }
+    // base64::encode(&contents)
 }
 
 #[tauri::command]
@@ -299,7 +328,7 @@ fn get_child_ids_of(pg_id:i32, school: &str)->SchoolIds{
 }
 fn main() {
   tauri::Builder::default()
-    .invoke_handler(tauri::generate_handler![is_path_exist, get_file_list, get_photo, get_ocr_info, get_rotated_image, get_rotated_image_tumb, rotate_and_copy, get_jpg_chil_ids, jpg_count, create_folder_paths, import_excel, get_afu_of,  get_pg_stat_byschool, get_pg_stats_all, get_all_photographers, get_all_schools, get_photographer_of, get_child_ids_of])
+    .invoke_handler(tauri::generate_handler![is_path_exist, get_file_list, get_photo,get_prev_year_photo, get_ocr_info, get_rotated_image, get_rotated_image_tumb, rotate_and_copy, get_jpg_chil_ids, jpg_count, create_folder_paths, import_excel, get_afu_of,  get_pg_stat_byschool, get_pg_stats_all, get_all_photographers, get_all_schools, get_photographer_of, get_child_ids_of])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
 }
