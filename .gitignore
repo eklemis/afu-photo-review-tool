@@ -8,11 +8,11 @@ node_modules
 !.env.example
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
-src-tauri/target
-src-tauri/src/data/prisma.rs
-.svelte-kit
-*.lock
-*.log
-.gitignore
-.npmrc
-*.db
+
+# rust compiled folders
+target
+
+# lock for libs
+/Cargo.lock
+/tooling/bench/tests/Cargo.lock
+/yarn.lock

@@ -7,7 +7,7 @@
 		"distDir": "../build"
 	},
 	"package": {
-		"productName": "photo-review",
+		"productName": "Field photo review",
 		"version": "0.1.0"
 	},
 	"tauri": {
@@ -29,7 +29,7 @@
 				"icons/icon.icns",
 				"icons/icon.ico"
 			],
-			"identifier": "eklemis.imagereview.tool",
+			"identifier": "eklemis.ek-solution.tool",
 			"longDescription": "",
 			"macOS": {
 				"entitlements": null,
@@ -38,7 +38,7 @@
 				"providerShortName": null,
 				"signingIdentity": null
 			},
-			"resources": ["data.db"],
+			"resources": ["data.db", "image_not_available.jpg"],
 			"shortDescription": "",
 			"targets": "all",
 			"windows": {

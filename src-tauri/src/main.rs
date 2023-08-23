@@ -224,15 +224,6 @@ fn get_prev_year_photo(id: &str) -> String {
         .unwrap();
     let base64 = image_to_base64(img);
     format!("data:image/png;base64,{}", base64)
-    // let mut file = match File::open(file_path) {
-    //     Ok(file) => file,
-    //     Err(_) => return String::new(),
-    // };
-    // let mut contents = Vec::new();
-    // if let Err(_) = file.read_to_end(&mut contents) {
-    //     return String::new();
-    // }
-    // base64::encode(&contents)
 }
 
 #[tauri::command]
